@@ -1,0 +1,25 @@
+# Guardian Demo Application Dockerfile - INSECURE VERSION
+# This demonstrates what NOT to do - runs as root
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code
+COPY app.py .
+
+# Expose port
+EXPOSE 8080
+
+# Add labels
+LABEL maintainer="Guardians of the Container Galaxy"
+LABEL org.opencontainers.image.title="Guardian Demo App (Insecure)"
+LABEL org.opencontainers.image.description="Demo application showing insecure container practices"
+LABEL org.opencontainers.image.version="1.0.0-insecure"
+
+# BAD PRACTICE: Running as root user (default)
+# No USER directive = runs as root (UID 0)
+
+# Run the application
+CMD ["python", "app.py"]

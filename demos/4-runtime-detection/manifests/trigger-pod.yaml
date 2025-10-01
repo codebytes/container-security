@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: falco-trigger
+  namespace: demo-drax
+  labels:
+    guardian.dev/demo: runtime-detection
+spec:
+  restartPolicy: Never
+  containers:
+    - name: trigger
+      image: alpine:3.19
+      command:
+        - /bin/sh
+        - -c
+        - |
+          echo "[trigger] Performing suspicious activities...";
+          echo "[1] Writing to /etc/shadow";
+          echo "malicious-user:x:0:0:root:/root:/bin/sh" >> /etc/shadow;
+          sleep 2;
+          echo "[2] Writing to /etc/passwd";
+          echo "backdoor:x:0:0:backdoor:/root:/bin/sh" >> /etc/passwd;
+          sleep 2;
+          echo "[3] Creating suspicious file in /etc";
+          echo "malware-config" > /etc/evil.conf;
+          sleep 2;
+          echo "[4] Modifying system configuration";
+          echo "* * * * * /tmp/backdoor.sh" >> /etc/crontabs/root || true;
+          sleep 30
+      securityContext:
+        privileged: false
+        allowPrivilegeEscalation: false

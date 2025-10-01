@@ -1,67 +1,51 @@
-# Marp Slides Template
+# Guardians of the Container Galaxy: Defending the Cosmic Cluster
 
-[Use this template!](https://github.com/codebytes/marp-slides-template/generate)
+This repository contains a pragmatic container security framework mapped onto a memorable "Guardians of the Galaxy" crew metaphor. Each character archetype represents a critical defensive layer—supply chain integrity, runtime behavioral detection, zero‑trust networking, and observability—to help teams remember and implement comprehensive container security practices.
 
-Create a Marp presentation site that can be built and published on [GitHub Pages] using this minimal template. The site features:
+## Slides
 
-- Marp integration
-- A GitHub Pages / Actions workflow for build and publish ([See a preview](http://chris-ayers.com/marp-slides-template/))
-- A DevContainer/CodeSpace configuration with Marp and Markdown preview extensions
-- Chrome installation for PDF and PowerPoint slide creation on Linux
+Slides can be found at [chris-ayers.com/container-security](https://chris-ayers.com/container-security)
 
-## Customization
+## Demos
 
-Feel free to customize the sites created with this template as you like!
+Hands-on walkthroughs live under `demos/` for each Guardian archetype:
 
-## Getting Started
-
-1. Click "[use this template]" to create a new site.
-2. Update the content of `slides/Slides.md` with your own presentation.
-
-## Custom Themes
-
-This template includes four custom themes in the `slides/themes` folder:
-
-- custom
-- custom-default (based on the built-in default theme)
-- custom-gaia (based on the built-in gaia theme)
-- custom-uncover (based on the built-in uncover theme)
-
-To use a custom theme, edit the relevant css file and add its reference in the front matter of `Slides.md`. For example, to use `custom-default` add the following to the `Slides.md` front matter:
-
-```markdown
----
-marp: true
-theme: custom-default
----
-```
-
-For additional themes, add them to the devcontainer and follow the [Marp custom theme documentation](https://marpit.marp.app/theme-css).
-
-## Publishing on GitHub Pages
-
-1. In your GitHub repo, navigate to `Settings` > `Pages` > `Build and deployment`.
-2. Select `Source`: `GitHub Actions`.
-3. If any Actions failed, go to the `Actions` tab and click on `Re-run jobs`.
-
-## Local Build and Preview
-
-1. Install [Visual Studio Code](https://code.visualstudio.com/).
-2. Install the [Marp for VS Code extension](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode).
-3. Open `slides/Slides.md` in VS Code.
-
-## Licensing and Attribution
-
-This repository is licensed under the [MIT License]. Reuse or extend the code as you wish, but include the original license. The deployment GitHub Actions workflow is based on GitHub's starter workflows.
+1. [demos/1-policy-guardrails/](demos/1-policy-guardrails/) – **Star-Lord**: Kyverno + Cosign admission enforcement
+2. [demos/2-supply-chain-trust/](demos/2-supply-chain-trust/) – **Gamora**: SBOM, scanning, signing pipeline
+3. [demos/3-image-hardening/](demos/3-image-hardening/) – **Rocket**: Dockerfile before/after with Trivy diff
+4. [demos/4-runtime-detection/](demos/4-runtime-detection/) – **Drax**: Falco custom rule + controlled trigger
+5. [demos/5-zero-trust-networking/](demos/5-zero-trust-networking/) – **Groot**: Deny-by-default NetworkPolicies
+6. [demos/6-observability-signals/](demos/6-observability-signals/) – **Mantis**: OTEL telemetry + Falco alert correlation
 
 ## Resources
 
-- [Use this template](https://github.com/codebytes/marp-slides-template/generate)
+- [Falco](https://falco.org)
+- [Trivy](https://aquasecurity.github.io/trivy/)
+- [Cosign](https://github.com/sigstore/cosign)
+- [Syft](https://github.com/anchore/syft)
+- [Grype](https://github.com/anchore/grype)
+- [Calico](https://www.tigera.io/project-calico/)
+- [Cilium](https://cilium.io)
+- [Kyverno](https://kyverno.io)
+- [OPA](https://www.openpolicyagent.org)
+- [CNCF Cloud Native Security Whitepaper](https://www.cncf.io/projects/security/)
 
-- GitHub Pages: [https://docs.github.com/en/pages](https://docs.github.com/en/pages)
+## Connect with Chris Ayers
 
-- CommonMark markdown syntax: [https://commonmark.org/help/](https://commonmark.org/help/)
+Feel free to connect with Chris Ayers on social media and visit his blog for more insights on DevOps, Azure, and container security.
 
-- Marp Official Repository: [https://github.com/marp-team/marp](https://github.com/marp-team/marp)
-- Marp Official Documentation: [https://marpit.marp.app/markdown](https://marpit.marp.app/markdown)
-- Marp for VS Code Documentation: [https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode)
+- Twitter: [@Chris_L_Ayers](https://twitter.com/Chris_L_Ayers)
+- Mastodon: [@Chrisayers@hachyderm.io](https://hachyderm.io/@Chrisayers)
+- LinkedIn: [chris-l-ayers](https://linkedin.com/in/chris-l-ayers/)
+- Blog: [chris-ayers.com](https://chris-ayers.com/)
+- GitHub: [Codebytes](https://github.com/codebytes)
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
+> "We are Groot." – In security terms: we are stronger as interlocked layers, not isolated tools.

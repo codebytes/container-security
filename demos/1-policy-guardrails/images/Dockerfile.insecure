@@ -1,0 +1,48 @@
+# Insecure demo image - demonstrates security anti-patterns
+FROM alpine:3.19
+
+# Install packages as root (and stay as root - INSECURE!)
+RUN apk add --no-cache \
+    curl \
+    wget \
+    bash \
+    sudo \
+    shadow
+
+# Set up working directory
+WORKDIR /app
+
+# Create an application that runs as root
+RUN cat > /app/app.sh << 'EOF'
+#!/bin/bash
+echo "⚠️  INSECURE Guardian Demo Application"
+echo "Running as user: $(whoami)"
+echo "User ID: $(id)"
+echo "Security context: ROOT USER - DANGEROUS!"
+echo "This image demonstrates INSECURE container practices"
+echo ""
+echo "This container has:"
+echo "- Root privileges (UID 0)"
+echo "- Full system access"
+echo "- No security constraints"
+echo ""
+echo "🚨 DO NOT USE IN PRODUCTION! 🚨"
+echo ""
+echo "Listening on port 8080..."
+while true; do
+    echo "Insecure app running with ROOT privileges... $(date)"
+    sleep 30
+done
+EOF
+
+# Make script executable
+RUN chmod +x /app/app.sh
+
+# Expose port 8080
+EXPOSE 8080
+
+# NO USER directive - runs as root (INSECURE!)
+# This demonstrates what NOT to do
+
+# Run as root (DANGEROUS!)
+ENTRYPOINT ["/app/app.sh"]

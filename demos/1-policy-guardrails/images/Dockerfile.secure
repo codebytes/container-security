@@ -1,0 +1,49 @@
+# Secure demo image - follows security best practices
+FROM alpine:3.19
+
+# Create a non-root user
+RUN addgroup -g 1001 appgroup && \
+    adduser -D -u 1001 -G appgroup appuser
+
+# Install minimal required packages (let Alpine choose latest stable versions)
+RUN apk add --no-cache \
+    curl \
+    ca-certificates
+
+# Set up working directory
+WORKDIR /app
+
+# Create a simple application
+RUN cat > /app/app.sh << 'EOF'
+#!/bin/sh
+echo "🔒 Secure Guardian Demo Application"
+echo "Running as user: $(whoami)"
+echo "User ID: $(id)"
+echo "Security context: Non-root, minimal privileges"
+echo "This image demonstrates secure container practices"
+echo ""
+echo "Container security features:"
+echo "- Non-root user (UID 1001)"
+echo "- Minimal package installation"
+echo "- Read-only application files"
+echo "- Non-privileged port"
+echo ""
+echo "Listening on port 8080..."
+while true; do
+    echo "Secure app is running... $(date)"
+    sleep 30
+done
+EOF
+
+# Make script executable and owned by appuser
+RUN chmod +x /app/app.sh && \
+    chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose port (non-privileged)
+EXPOSE 8080
+
+# Run as non-root
+ENTRYPOINT ["/app/app.sh"]

@@ -1,0 +1,19 @@
+falcosidekick:
+  replicaCount: 1
+  image:
+    repository: falcosecurity/falcosidekick
+    tag: latest
+  config:
+    customfields: "guardian.demo=observability"
+    webhook:
+      url: "http://otel-collector.demo-mantis.svc.cluster.local:4318/v1/logs"
+    outputs:
+      slack:
+        enabled: false
+      loki:
+        enabled: false
+      webhook:
+        enabled: true
+        address: "http://otel-collector.demo-mantis.svc.cluster.local:4318/v1/logs"
+  serviceAccount:
+    create: true

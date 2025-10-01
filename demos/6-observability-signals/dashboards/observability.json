@@ -1,0 +1,56 @@
+{
+  "title": "Guardian Observability Correlation",
+  "uid": "guardian-observe",
+  "schemaVersion": 36,
+  "version": 1,
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Request Latency (ms)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PROMETHEUS_DS"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_duration_bucket{service=\"guardian-telemetry\"}[5m])) by (le))",
+          "legendFormat": "p95 latency"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Falco Alerts (Log view)",
+      "datasource": {
+        "type": "loki",
+        "uid": "LOKI_DS"
+      },
+      "targets": [
+        {
+          "expr": "{guardian_demo=\"observability\"}"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Recent Traces",
+      "datasource": {
+        "type": "tempo",
+        "uid": "TEMPO_DS"
+      },
+      "targets": [
+        {
+          "data": {
+            "queryType": "traceql",
+            "resultFormat": "table"
+          },
+          "query": "{ service.name = \"guardian-telemetry\" } | last_over_time()"
+        }
+      ]
+    }
+  ]
+}

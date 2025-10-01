@@ -1,0 +1,54 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-nonroot-demo
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: disallow-root-user-pod-level
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "Running as root user (UID 0) at pod level is not allowed"
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.spec.securityContext.runAsUser || `999999` }}"
+                operator: Equals
+                value: 0
+    - name: disallow-root-user-container-level
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "Running as root user (UID 0) at container level is not allowed"
+        foreach:
+          - list: "request.object.spec.containers"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ element.securityContext.runAsUser || `999999` }}"
+                    operator: Equals  
+                    value: 0
+    - name: require-secure-images
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "Only secure images are allowed. Image must use 'secure' tag (simulating signed image requirement)"
+        foreach:
+          - list: "request.object.spec.containers"
+            deny:
+              conditions:
+                any:
+                  - key: "{{ contains(element.image, ':insecure') }}"
+                    operator: Equals
+                    value: true

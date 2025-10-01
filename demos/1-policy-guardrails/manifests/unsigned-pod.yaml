@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unsigned-pod
+  namespace: demo-star-lord
+spec:
+  containers:
+    - name: web
+      image: guardian-demo:insecure
+      # Note: No securityContext specified - will use image defaults
+      # This demonstrates an "unsigned" image that doesn't follow security best practices

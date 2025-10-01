@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: falco
+  namespace: falco
+spec:
+  template:
+    spec:
+      volumes:
+        - name: falco-demo-rules
+          configMap:
+            name: falco-demo-rules
+      containers:
+        - name: falco
+          volumeMounts:
+            - name: falco-demo-rules
+              mountPath: /etc/falco/rules.d/demo
+              readOnly: true

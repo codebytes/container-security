@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: telemetry-load
+  namespace: demo-mantis
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        job: telemetry-load
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: curl
+          image: curlimages/curl:8.8.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              for i in $(seq 1 5); do
+                curl -sS guardian-telemetry:8080/hello;
+                sleep 1;
+              done;
+              curl -sS guardian-telemetry:8080/simulate-anomaly;

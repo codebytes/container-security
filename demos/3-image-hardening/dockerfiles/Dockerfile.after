@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1.6
+
+FROM python:3.11-slim AS build
+WORKDIR /app
+ENV PIP_NO_CACHE_DIR=1
+COPY app/ /app/
+RUN useradd --create-home --shell /usr/sbin/nologin appuser && \
+    pip install --no-cache-dir -r requirements.txt
+
+FROM gcr.io/distroless/python3-debian12
+WORKDIR /app
+USER 1000
+COPY --from=build /usr/local /usr/local
+COPY --from=build /etc/passwd /etc/passwd
+COPY --from=build /app /app
+ENV PYTHONUNBUFFERED=1
+EXPOSE 8080
+ENTRYPOINT ["python", "/app/main.py"]

@@ -1,0 +1,9 @@
+FROM python:3.11-bullseye
+WORKDIR /app
+COPY app/ /app/
+RUN pip install --no-cache-dir -r requirements.txt && \
+    apt-get update && apt-get install -y curl git vim && \
+    pip install --no-cache-dir gunicorn
+ENV FLASK_ENV=development
+EXPOSE 8080
+CMD ["python", "main.py"]

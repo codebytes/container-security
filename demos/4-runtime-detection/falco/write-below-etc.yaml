@@ -1,0 +1,6 @@
+- rule: Write Below Etc Demo
+  desc: Detect any container writing to files under /etc (demo rule)
+  condition: evt.type in (open,openat,openat2) and evt.arg.flags contains O_WRONLY and fd.name startswith "/etc"
+  output: "Write below /etc detected (user=%user.name command=%proc.cmdline file=%fd.name container=%container.name)"
+  priority: WARNING
+  tags: [demo, filesystem]

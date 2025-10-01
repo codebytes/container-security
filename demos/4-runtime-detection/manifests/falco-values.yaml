@@ -1,0 +1,20 @@
+driver:
+  kind: modern_ebpf
+
+tty: true
+
+customRules:
+  write-below-etc.yaml: |-
+    - rule: Write Below Etc Demo
+      desc: Detect any container writing to files under /etc (demo rule)
+      condition: >
+        evt.type in (open,openat,openat2) and
+        evt.is_open_write=true and
+        fd.name startswith "/etc" and
+        container.id != host
+      output: >
+        Write below /etc detected
+        (user=%user.name command=%proc.cmdline file=%fd.name
+        container=%container.name namespace=%k8s.ns.name pod=%k8s.pod.name)
+      priority: WARNING
+      tags: [demo, filesystem, container]

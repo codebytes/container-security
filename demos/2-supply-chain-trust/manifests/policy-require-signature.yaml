@@ -1,0 +1,36 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-supply-chain-signatures
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 15
+  rules:
+    - name: require-signed-images
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/codebytes/guardian-demo-app*"
+          attestors:
+            - entries:
+                - keyless:
+                    identities:
+                      - issuer: https://token.actions.githubusercontent.com
+                        subject: repo:codebytes/guardian-demo:ref:refs/heads/main
+    - name: require-minimum-scan-level
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "Image must be labeled with vulnerability report showing no HIGH/CRITICAL findings"
+        pattern:
+          metadata:
+            labels:
+              guardian.dev/last-scan: "high-critical-clear"
