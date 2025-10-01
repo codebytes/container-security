@@ -11,7 +11,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ## Defending the Cosmic Cluster
 
 ### Chris Ayers
-#### Senior Customer Engineer - Microsoft
+#### Senior Software Engineer - Microsoft
 
 ![bg right:40%](https://github.com/codebytes.png)
 
@@ -20,7 +20,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ![bg left:40%](https://github.com/codebytes.png)
 
 ## Chris Ayers
-### Senior Customer Engineer - Microsoft
+### Senior Software Engineer - Microsoft
 
 <i class="fa-brands fa-twitter"></i> Twitter: @Chris\_L\_Ayers
 <i class="fa-brands fa-mastodon"></i> Mastodon: @Chrisayers@hachyderm.io
@@ -2898,7 +2898,7 @@ chris-ayers.com/container-security
 ![bg right:40%](https://github.com/codebytes.png)
 
 ### Chris Ayers
-#### Senior Customer Engineer - Microsoft
+#### Senior Software Engineer - Microsoft
 
 <i class="fa-brands fa-twitter"></i> Twitter: @Chris\_L\_Ayers
 <i class="fa-brands fa-mastodon"></i> Mastodon: @Chrisayers@hachyderm.io
