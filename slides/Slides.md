@@ -6,18 +6,29 @@ footer: 'chris-ayers.com | @Chris_L_Ayers'
 description: 'A layered, CNCF-based walkthrough of pragmatic container security.'
 ---
 
-<!-- TITLE SLIDE -->
-# **Guardians of the Container Galaxy**
+<!-- _color: white -->
+
+# <!-- fit --> Guardians of the Container Galaxy
+
+<div class="columns">
+<div>
+
 ## Defending the Cosmic Cluster
 
-### Chris Ayers
-#### Senior Software Engineer - Microsoft
+</div>
+<div>
 
-![bg right:40%](https://github.com/codebytes.png)
+### Chris Ayers
+#### Senior Software Engineer
+#### Microsoft
+
+</div>
+
+![bg ](./img/team.png)
 
 ---
 
-![bg left:40%](https://github.com/codebytes.png)
+![bg left:40%](./img/portrait.png)
 
 ## Chris Ayers
 ### Senior Software Engineer - Microsoft
@@ -261,6 +272,8 @@ Multiple independent layers catch what others miss:
 ## 🎯 Star-Lord
 ### Policy Orchestration
 
+![bg right](./img/policy.png)
+
 ---
 
 ## Star-Lord: Security Concept
@@ -336,6 +349,8 @@ Multiple independent layers catch what others miss:
 # Guardian #2
 ## ⚔️ Gamora
 ### Supply Chain Integrity
+
+![bg right](./img/supply-chain.png)
 
 ---
 
@@ -415,6 +430,8 @@ Multiple independent layers catch what others miss:
 ## 🔧 Rocket
 ### Image Hardening
 
+![bg right](./img/image-hardening.png)
+
 ---
 
 ## Rocket: Attack Surface Equation
@@ -493,6 +510,8 @@ CMD ["app/index.js"]
 # Guardian #4
 ## 💪 Drax
 ### Runtime Detection
+
+![bg right](./img/runtime-detection.png)
 
 ---
 
@@ -576,6 +595,8 @@ CMD ["app/index.js"]
 ## 🌳 Groot
 ### Zero-Trust Networking
 
+![bg right](./img/zero-trust-networking.png)
+
 ---
 
 ## Groot: The Lateral Movement Problem
@@ -657,6 +678,8 @@ CMD ["app/index.js"]
 # Guardian #6
 ## 🔮 Mantis
 ### Security Observability
+
+![bg right](./img/observability.png)
 
 ---
 
@@ -827,6 +850,8 @@ CMD ["app/index.js"]
 ---
 
 ## Questions?
+
+![bg right](./img/owl.png)
 
 ---
 
