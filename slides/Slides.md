@@ -99,8 +99,6 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 - 🌳 **Groot** → Network Segmentation
 - 🔮 **Mantis** → Observability
 
-**Why?** Memorable, team-based defense
-
 ---
 
 ## Security Foundation: Defense in Depth
@@ -219,6 +217,7 @@ Multiple independent layers catch what others miss:
 - **Codecov (2021):** Bash upload script modified → credentials stolen for months
 - **3CX (2023):** Desktop app trojanized → widespread supply chain malware
 - **Event-Stream NPM (2018):** Maintainer added Bitcoin wallet stealer
+- **Shai Hulud Worm (2025):** Malicious code in popular npm packages
 
 **Defense:** SLSA Framework (Levels 0-4)
 - **Level 2+** = Signed provenance, hardened builds
@@ -866,12 +865,9 @@ CMD ["app/index.js"]
 
 ## Links
 
-- [https://kyverno.io](https://kyverno.io)
-- [https://trivy.dev](https://trivy.dev)
-- [https://sigstore.dev](https://sigstore.dev)
-- [https://falco.org](https://falco.org)
-- [https://www.projectcalico.org](https://www.projectcalico.org)
-- [https://opentelemetry.io](https://opentelemetry.io)
+- [NIST SP 800-207](https://csrc.nist.gov/publications/detail/sp/800-207/final)
+- [Shai Hulud Worm](https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem)
+- [Supply-chain Levels for Software Artifacts (SLSA)](https://slsa.dev/)
 
 </div>
 <div>
