@@ -31,13 +31,15 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ![bg left:40%](./img/portrait.png)
 
 ## Chris Ayers
-### Senior Software Engineer - Microsoft
 
-<i class="fa-brands fa-twitter"></i> Twitter: @Chris\_L\_Ayers
-<i class="fa-brands fa-mastodon"></i> Mastodon: @Chrisayers@hachyderm.io
-<i class="fa-brands fa-linkedin"></i> LinkedIn: chris-l-ayers
-<i class="fa-brands fa-windows"></i> Blog: [chris-ayers.com](https://chris-ayers.com/)
-<i class="fa-brands fa-github"></i> GitHub: [codebytes](https://github.com/codebytes)
+### Senior Software Engineer<br>Azure CXP AzRel<br>Microsoft
+
+<i class="fa-brands fa-bluesky"></i> BlueSky: [@chris-ayers.com](https://bsky.app/profile/chris-ayers.com)
+<i class="fa-brands fa-linkedin"></i> LinkedIn: - [chris\-l\-ayers](https://linkedin.com/in/chris-l-ayers/)
+<i class="fa fa-window-maximize"></i> Blog: [https://chris-ayers\.com/](https://chris-ayers.com/)
+<i class="fa-brands fa-github"></i> GitHub: [Codebytes](https://github.com/codebytes)
+<i class="fa-brands fa-mastodon"></i> Mastodon: [@Chrisayers@hachyderm.io](https://hachyderm.io/@Chrisayers)
+~~<i class="fa-brands fa-twitter"></i> Twitter: @Chris_L_Ayers~~
 
 ---
 
