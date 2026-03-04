@@ -19,7 +19,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 <div>
 
 ### Chris Ayers
-#### Senior Software Engineer
+#### Principal Software Engineer
 #### Microsoft
 
 </div>
@@ -32,7 +32,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ## Chris Ayers
 
-### Senior Software Engineer<br>Azure CXP AzRel<br>Microsoft
+### Principal Software Engineer<br>Azure CXP AzRel<br>Microsoft
 
 <i class="fa-brands fa-bluesky"></i> BlueSky: [@chris-ayers.com](https://bsky.app/profile/chris-ayers.com)
 <i class="fa-brands fa-linkedin"></i> LinkedIn: - [chris\-l\-ayers](https://linkedin.com/in/chris-l-ayers/)
