@@ -10,7 +10,7 @@ helm repo add falcosecurity https://falcosecurity.github.io/charts | Out-Null
 helm repo update | Out-Null
 helm upgrade --install falco falcosecurity/falco `
   --namespace falco `
-  --set driver.kind=ebpf | Out-Null
+  --set driver.kind=modern_ebpf | Out-Null
 
 Write-Host "[3/7] Applying custom rule ConfigMap" -ForegroundColor Cyan
 kubectl apply -f ../manifests/falco-rules-configmap.yaml | Out-Null

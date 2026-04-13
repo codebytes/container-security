@@ -17,6 +17,8 @@ spec:
     spec:
       containers:
         - name: app
+          # imagePullPolicy: Never requires the image to be pre-loaded into the
+          # cluster node (e.g., via `docker build` + kind/minikube load).
           image: guardian-telemetry:local
           imagePullPolicy: Never
           ports:
@@ -34,6 +36,19 @@ spec:
               value: otlp
             - name: OTEL_LOGS_EXPORTER
               value: otlp
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
           readinessProbe:
             httpGet:
               path: /health

@@ -21,7 +21,7 @@ Show how Falco detects suspicious container activity (writing below `/etc`) and 
    helm repo update
    helm upgrade --install falco falcosecurity/falco \
      --namespace falco --create-namespace \
-     --set driver.kind=ebpf
+     --set driver.kind=modern_ebpf
    ```
 2. **Deploy Custom Rules ConfigMap**
    ```powershell
@@ -56,7 +56,7 @@ Show how Falco detects suspicious container activity (writing below `/etc`) and 
 | `scripts/run-demo.ps1` | Helper script to automate trigger and log collection |
 
 ## Verification Checklist
-- [ ] Falco daemonset running with eBPF driver.
+- [ ] Falco daemonset running with modern eBPF driver.
 - [ ] Custom rule visible in Falco logs during startup.
 - [ ] Trigger pod causes Falco alert with `Write Below Etc Demo` output.
 - [ ] Alert contains pod namespace/name for correlation.

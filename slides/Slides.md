@@ -64,44 +64,17 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ## The Container Attack Kill Chain
 
-1. **Initial Compromise** → Poisoned base image
-2. **Build Integration** → Survives CI/CD (no scanning)
-3. **Registry Storage** → Unsigned artifact
-4. **Deployment** → Privileged container
-5. **Runtime Execution** → Crypto mining payload
-6. **Network Discovery** → Flat network recon
-7. **Lateral Movement** → Compromise database
-8. **Persistence** → Backdoors & exfiltration
-
----
-
-## Defense in Depth Strategy
-
-**Build** → **Deploy** → **Run** → **Observe**
-
-**Shift Left + Shield Right**
-
-- **Shift Left:** Find & fix early (SBOM, scan, sign)
-- **Shield Right:** Detect & contain (runtime, network)
-
-**No single control is perfect → Layer them**
+![center w:650](./img/attack-kill-chain.drawio.png)
 
 ---
 
 ## The Guardians Framework
 
-**6 Security Layers** mapped to Guardians characters:
-
-- 🎯 **Star-Lord** → Policy & Governance
-- ⚔️ **Gamora** → Supply Chain Integrity
-- 🔧 **Rocket** → Image Hardening
-- 💪 **Drax** → Runtime Detection
-- 🌳 **Groot** → Network Segmentation
-- 🔮 **Mantis** → Observability
+![center w:900](./img/guardians-defense-layers.drawio.png)
 
 ---
 
-## Defense in Depth
+## Why Layering Matters
 
 **No single control is perfect** → Layer them (Swiss cheese model)
 
@@ -155,16 +128,9 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ---
 
-## Star-Lord: Security Concept
-### Admission Control
+## Star-Lord: Admission Control
 
-**The checkpoint between `kubectl apply` and your cluster:**
-
-- **Validate** → reject unsafe objects (unsigned images, root pods)
-- **Mutate** → inject security defaults (labels, resource limits)
-- Runs **before** objects are created in etcd
-
-**Think:** Airport security + customs — inspect, reject prohibited items, ensure required paperwork
+![center w:900](./img/admission-control-flow.drawio.png)
 
 ---
 
@@ -248,30 +214,18 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ---
 
-## Gamora: Defense Progression
+## ⚔️ Gamora: Supply Chain Defense Pipeline
 
-**Each layer catches what the previous one can't:**
-
-**SBOM** → tells you *what's there* (inventory all components)
-↓
-**Scanning** → tells you *what's known-bad* (match CVE databases)
-↓
-**Signing** → tells you *who produced it* (cryptographic identity)
-↓
-**SLSA** → tells you *how trustworthy the build was* (provenance)
+![center w:900](./img/supply-chain-pipeline.drawio.png)
 
 ---
 
-## Gamora: Vulnerability Defense Layers
+## Gamora: Vulnerability Scanning & Signing
 
 **Vulnerability Scanning:**
-- Match packages against CVE databases
-- Severity scoring (CVSS)
-- **Gate:** Fail builds on HIGH/CRITICAL
-
----
-
-## Gamora: Vulnerability Defense Layers
+- Match packages against CVE databases (NVD, OSV)
+- Severity scoring (CVSS) — **Gate:** Fail builds on HIGH/CRITICAL
+- Tools: Trivy, Grype, Snyk
 
 **Cryptographic Signing:**
 - Keyless with OIDC (no key management!)
@@ -319,18 +273,9 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ---
 
-## Rocket: Attack Surface Equation
+## Rocket: Before & After
 
-**Packages + Privileges = Exploit Opportunities**
-
-**Traditional Base Image (ubuntu:22.04):**
-- 100+ OS packages
-- Bash shell
-- Package manager (apt)
-- Debugging tools (curl, wget, netcat)
-- **Result:** Many CVEs, large attack surface
-
-**Every package is a potential vulnerability**
+![center w:900](./img/image-hardening-comparison.drawio.png)
 
 ---
 
@@ -345,7 +290,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ---
 
-## Rocket: Distroless Philosophy
+## Rocket: Distroless by the Numbers
 
 **Numbers:**
 - Ubuntu base: ~80MB, 100+ packages
@@ -364,16 +309,18 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ```dockerfile
 # Stage 1: Build (has compilers, tools)
-FROM node:22 AS builder
+FROM python:3.11-slim AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime (minimal)
-FROM gcr.io/distroless/nodejs22-debian12
-COPY --from=builder /app /app
+FROM gcr.io/distroless/python3-debian12
+COPY --from=build /usr/local/lib/python3.11/site-packages \
+     /usr/local/lib/python3.11/site-packages
+COPY --from=build /app /app
 USER nonroot:nonroot
-CMD ["app/index.js"]
+ENTRYPOINT ["python", "/app/main.py"]
 ```
 
 **Build tools never reach production**
@@ -385,8 +332,8 @@ CMD ["app/index.js"]
 
 **What We'll Show:**
 
-1. Scan "before" (node:22) → Count CVEs
-2. Scan "after" (distroless) → Count CVEs
+1. Scan "before" (python:3.11-bullseye) → Count CVEs
+2. Scan "after" (distroless python3-debian12) → Count CVEs
 3. Compare: **60-80% reduction**
 4. Compare sizes: **50%+ smaller**
 5. Show: No shell in distroless container
@@ -450,30 +397,9 @@ Use Tetragon when you need real-time kernel-level blocking
 
 ---
 
-## Drax: Detection Patterns
+## Drax: Detection Architecture
 
-**File System Tampering:**
-- Writes to /etc, /bin, /usr/bin
-- Credential theft (/root/.ssh)
-- Config tampering
-
----
-
-## Drax: Process Patterns
-
-**Process Anomalies:**
-- Shell spawning in non-interactive containers
-- Unexpected binary execution (/tmp)
-- Crypto miners (high CPU + network)
-
----
-
-## Drax: Network Patterns
-
-**Network Anomalies:**
-- Unexpected egress (data exfiltration)
-- C2 beacon connections
-- Crypto mining pools
+![center w:900](./img/runtime-detection-arch.drawio.png)
 
 ---
 
@@ -521,14 +447,7 @@ Use Tetragon when you need real-time kernel-level blocking
 
 ## Groot: Zero Trust in Kubernetes
 
-**Kubernetes has no perimeter** — so apply Zero Trust inside the cluster:
-
-- **Default deny** → no pod-to-pod traffic unless explicitly allowed
-- **Identity via labels** → `app=frontend` can reach `app=api`, not by IP
-- **Least privilege** → only the paths your app actually needs
-- **Namespace isolation** → dev cannot talk to prod
-
-**Like internal doors with locks — not an open-plan office**
+![center w:900](./img/zero-trust-network.drawio.png)
 
 ---
 
@@ -585,7 +504,7 @@ Use Tetragon when you need real-time kernel-level blocking
 
 ---
 
-## Mantis: Observability Correlation
+## Mantis: Correlation in Action
 
 **With Correlation:**
 - **9:00 AM:** API latency spike (APM)
@@ -596,17 +515,9 @@ Use Tetragon when you need real-time kernel-level blocking
 
 ---
 
-## Mantis: The Capstone — Making Every Guardian Visible
+## Mantis: Observability Correlation
 
-**Mantis correlates signals from all 5 other Guardians:**
-
-- ⚔️ **Gamora:** Build scan findings + SBOM data
-- 🎯 **Star-Lord:** Admission denials + policy violations
-- 🔧 **Rocket:** Image metadata + hardening status
-- 💪 **Drax:** Runtime alerts (Falco / Tetragon)
-- 🌳 **Groot:** NetworkPolicy denials (lateral movement attempts)
-
-**Shared context:** Pod name, namespace, timestamp, workload
+![center w:900](./img/observability-correlation.drawio.png)
 
 
 ---
@@ -647,24 +558,35 @@ Use Tetragon when you need real-time kernel-level blocking
 1. Deploy OTEL collector + instrumented app
 2. Deploy Falcosidekick → Route alerts to OTEL
 3. Generate traffic → See traces in logs
-4. (Optional) Trigger Falco → Correlate trace ID
+4. (Optional) Trigger Falco → See security events alongside app traces
 5. View timeline → App + security events
 
 **Key Takeaway:** Link security to business impact
 
 ---
 
-## How the Guardians Work Together
+## Guardians Together: Prevent & Harden
 
 **Scenario:** Cryptominer in compromised Node.js image
 
 | Attack Step | Guardian | Action | Result |
 |-------------|----------|--------|--------|
-| Poisoned base image | ⚔️ Gamora | Scan + SBOM detects known vuln | ⚠️ Catches known threats |
-| Bloated attack surface | 🔧 Rocket | Distroless reduces tooling | ✅ Less to exploit |
-| Unsigned deployment | 🎯 Star-Lord | Policy rejects unsigned image | ✅ Blocked at gate |
-| Mining process spawns | 💪 Drax | Falco detects anomalous process | ✅ Alert in seconds |
-| C2 network beacon | 🌳 Groot | Egress policy blocks connection | ✅ Contained |
+| Poisoned base image | ⚔️ Gamora | Scan + SBOM detects vuln | ⚠️ Known threats caught |
+| Bloated surface | 🔧 Rocket | Distroless reduces tooling | ✅ Less to exploit |
+| Unsigned deploy | 🎯 Star-Lord | Policy rejects image | ✅ Blocked at gate |
+
+**Prevention catches what's known — but what gets through?**
+
+---
+
+## Guardians Together: Detect & Contain
+
+**The attacker bypassed build-time controls…**
+
+| Attack Step | Guardian | Action | Result |
+|-------------|----------|--------|--------|
+| Mining process spawns | 💪 Drax | Falco detects anomaly | ✅ Alert in seconds |
+| C2 network beacon | 🌳 Groot | Egress policy blocks it | ✅ Contained |
 | Full timeline needed | 🔮 Mantis | Correlates all signals | ✅ MTTR < 1 hour |
 
 **Not every layer prevents — some reduce, some detect, some contain.**
@@ -673,14 +595,12 @@ Use Tetragon when you need real-time kernel-level blocking
 
 ## Container Security Maturity Model
 
-**To reach the next level, do these things:**
-
-| Transition | Actions |
-|------------|---------|
-| **Level 0 → 1** | Image scanning in CI, Pod Security Admission (audit mode) |
-| **Level 1 → 2** | Image signing + verification, default-deny NetworkPolicies, secrets management |
-| **Level 2 → 3** | Runtime detection (Falco), observability correlation, service mesh (mTLS) |
-| **Level 3 → 4** | Attestations, automated response, MTTR optimization, false positive tuning |
+| Level | Actions to Reach It |
+|-------|---------------------|
+| **0 → 1** | Image scanning in CI, Pod Security Admission (audit) |
+| **1 → 2** | Image signing + verification, default-deny NetworkPolicies |
+| **2 → 3** | Runtime detection (Falco), observability correlation, mTLS |
+| **3 → 4** | Attestations, automated response, MTTR optimization |
 
 ---
 
@@ -721,10 +641,6 @@ Use Tetragon when you need real-time kernel-level blocking
 <div class="columns">
 <div>
 
-**"We are layered — Security is a team sport!"**
-
-## Repo & Links
-
 - **Repo:** [github.com/codebytes/container-security](https://github.com/codebytes/container-security)
 - **Slides:** [chris-ayers.com/container-security](https://chris-ayers.com/container-security)
 - [NIST SP 800-207](https://csrc.nist.gov/publications/detail/sp/800-207/final)
@@ -735,14 +651,11 @@ Use Tetragon when you need real-time kernel-level blocking
 </div>
 <div>
 
-## Follow Chris Ayers
-
 <i class="fa-brands fa-bluesky"></i> BlueSky: [@chris-ayers.com](https://bsky.app/profile/chris-ayers.com)
 <i class="fa-brands fa-linkedin"></i> LinkedIn: - [chris\-l\-ayers](https://linkedin.com/in/chris-l-ayers/)
 <i class="fa fa-window-maximize"></i> Blog: [https://chris-ayers\.com/](https://chris-ayers.com/)
 <i class="fa-brands fa-github"></i> GitHub: [Codebytes](https://github.com/codebytes)
 <i class="fa-brands fa-mastodon"></i> Mastodon: [@Chrisayers@hachyderm.io](https://hachyderm.io/@Chrisayers)
-~~<i class="fa-brands fa-twitter"></i> Twitter: @Chris_L_Ayers~~
 
 </div>
 </div>

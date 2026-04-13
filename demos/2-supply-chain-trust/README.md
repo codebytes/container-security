@@ -16,6 +16,20 @@ Illustrate a secure image pipeline that produces an SBOM, scans for vulnerabilit
 - Kubernetes cluster with Kyverno (reuse from policy demo) or Gatekeeper for admission policy.
 - Optional: `make` for pipeline convenience.
 
+## Key Pair Setup
+
+Before running the demo, generate your own Cosign key pair:
+
+```bash
+cosign generate-key-pair
+```
+
+This creates `cosign.key` (private) and `cosign.pub` (public) in the current directory.
+
+> ⚠️ **Never commit `cosign.key` to version control.** The `.gitignore` is configured to
+> exclude both `cosign.key` and `cosign.pub`. If you need to share the public key with
+> your cluster policy, copy it manually or use a secret manager.
+
 ## Environment Variables
 ```bash
 export DEMO_REGISTRY="localhost:5000"

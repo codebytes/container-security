@@ -1,3 +1,9 @@
+# NOTE: Falcosidekick sends its own JSON format to webhook endpoints, NOT
+# OTLP-compatible JSON. The OTEL collector's OTLP HTTP receiver (/v1/logs)
+# will reject Falcosidekick payloads. In production, deploy a format adapter
+# (e.g., a lightweight HTTP service or FluentBit) between Falcosidekick and
+# the OTLP collector to transform Falco events into OTLP log records.
+# For this demo we send to a generic HTTP receiver on the collector.
 falcosidekick:
   replicaCount: 1
   image:
@@ -5,8 +11,6 @@ falcosidekick:
     tag: latest
   config:
     customfields: "guardian.demo=observability"
-    webhook:
-      url: "http://otel-collector.demo-mantis.svc.cluster.local:4318/v1/logs"
     outputs:
       slack:
         enabled: false
@@ -14,6 +18,7 @@ falcosidekick:
         enabled: false
       webhook:
         enabled: true
-        address: "http://otel-collector.demo-mantis.svc.cluster.local:4318/v1/logs"
+        # Generic HTTP endpoint — NOT the OTLP /v1/logs path (see note above)
+        address: "http://otel-collector.demo-mantis.svc.cluster.local:4318/webhook/falco"
   serviceAccount:
     create: true

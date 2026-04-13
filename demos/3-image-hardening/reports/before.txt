@@ -1,3 +1,8 @@
+# Trivy scan report for guardian-demo:before
+# Base image: python:3.11-bullseye (Debian 11.11)
+# Generated: 2025 — may be outdated; re-run `trivy image` for current results.
+# NOTE: The "after" report uses Debian 12 (bookworm) via distroless, so
+# vulnerability counts are not a pure apples-to-apples OS comparison.
 
 Report Summary
 

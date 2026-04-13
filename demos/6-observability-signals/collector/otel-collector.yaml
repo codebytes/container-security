@@ -64,8 +64,6 @@ data:
         protocols:
           grpc:
           http:
-      fluentforward:
-        endpoint: 0.0.0.0:8006
     processors:
       batch:
       attributes/add-falco-labels:
@@ -92,6 +90,6 @@ data:
           processors: [batch]
           exporters: [logging/debug, prometheus]
         logs:
-          receivers: [otlp, fluentforward]
+          receivers: [otlp]
           processors: [batch, attributes/add-falco-labels]
           exporters: [logging/debug]

@@ -7,7 +7,7 @@ Demonstrate deny-by-default Kubernetes NetworkPolicies that explicitly allow ser
 - Deploy a simple three-tier demo (frontend → api → db).
 - Apply default deny policies for namespace ingress/egress.
 - Define explicit allow rules for approved flows.
-- Validate blocked traffic using busybox test pod.
+- Validate blocked traffic using curl test pod (`curlimages/curl`).
 
 ## Prerequisites
 - Kubernetes cluster with `kubectl` access.
@@ -50,7 +50,7 @@ Demonstrate deny-by-default Kubernetes NetworkPolicies that explicitly allow ser
 | `manifests/base-services.yaml` | Deploy frontend, api, db deployments/services |
 | `manifests/default-deny.yaml` | Namespace-wide deny policies |
 | `manifests/allow-policies.yaml` | Explicit allow rules for legitimate flows |
-| `manifests/tester-pod.yaml` | Busybox pod for validation |
+| `manifests/tester-pod.yaml` | curl pod for validation (`curlimages/curl`) |
 | `manifests/allow-tester-api.yaml` | Temporary diagnostic allowance |
 | `scripts/run-demo.ps1` | Automates test sequence |
 

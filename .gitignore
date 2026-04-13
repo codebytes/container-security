@@ -348,3 +348,10 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+# Cosign signing keys - never commit private keys
+cosign.key
+cosign.pub
+
+.playwright-cli/
+.playwright-mcp/

@@ -18,10 +18,11 @@ spec:
             - "ghcr.io/codebytes/guardian-demo-app*"
           attestors:
             - entries:
-                - keyless:
-                    identities:
-                      - issuer: https://token.actions.githubusercontent.com
-                        subject: repo:codebytes/guardian-demo:ref:refs/heads/main
+                - keys:
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      <INSERT YOUR cosign.pub CONTENTS HERE>
+                      -----END PUBLIC KEY-----
     - name: require-minimum-scan-level
       match:
         any:
