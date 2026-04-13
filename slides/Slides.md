@@ -46,7 +46,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ## Container Security: The Challenge
 
 **Modern Container Threats:**
-- Supply Chain Attacks (SolarWinds, Codecov, 3CX)
+- Supply Chain Attacks (xz-utils, LiteLLM, Axios)
 - Runtime Exploits (Cryptojacking, Container Escape)
 - Lateral Movement (Flat Networks)
 - Visibility Gaps (Lack of Observability)
@@ -56,9 +56,9 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ## Container Security: The Impact
 
 **The Numbers:**
-- 51% of images contain HIGH/CRITICAL CVEs
-- 742% increase in supply chain attacks
-- 200+ days dwell time without runtime detection
+- 78% of orgs fail audits due to unresolved container CVEs
+- 63% of organizations hit by supply chain attacks (2024-2025)
+- 267 days average dwell time without runtime detection
 
 ---
 
@@ -101,170 +101,48 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ---
 
-## Security Foundation: Defense in Depth
+## Defense in Depth
 
-**No single control is perfect**
+**No single control is perfect** → Layer them (Swiss cheese model)
 
-Multiple independent layers catch what others miss:
-- Build-time scanning misses zero-days → Runtime detection catches them
-- Signed images prevent tampering → Policies enforce verification
-- Network segmentation limits blast radius → Observability shows the attack
+**Log4Shell (CVE-2021-44228) proved it:**
 
-**Think:** Swiss cheese model - holes align rarely
+| Layer | Response |
+|-------|----------|
+| **Scanning** | Found vulnerable Log4j in images |
+| **Runtime** | Detected JNDI exploitation attempts |
+| **Network** | Blocked C2 communication |
+| **Observability** | Correlated timeline, full reconstruction |
 
----
-
-## Defense in Depth: Example
-
-**Log4Shell (CVE-2021-44228) Response:**
-
-| Layer | Detection/Response |
-|-------|-------------------|
-| **Layer 1 - Scanning** | Found vulnerable Log4j versions in images |
-| **Layer 2 - Runtime** | Detected exploitation attempts (JNDI lookups) |
-| **Layer 3 - Network** | Blocked C2 communication attempts |
-| **Layer 4 - Observability** | Correlated timeline, full incident reconstruction |
-
-**One layer missed = others still protect**
+**Different layers fail differently — overlapping controls matter**
 
 ---
 
-## Security Foundation: Shift Left
+## Shift Left + Shield Right
 
-**Shift Left = Find & Fix Early (Build-time)**
+**Shift Left** = Prevent known bad (build-time)
+- SBOM, vulnerability scanning, image signing
+- Goal: catch 80% before deploy
 
-- Find vulnerabilities **before** deployment
-- Cheaper to fix (minutes vs hours/days)
-- Gate on critical findings
-- Prevent known issues from reaching production
+**Shield Right** = Detect & contain what gets through (runtime)
+- Behavioral detection, network policies, observability
+- Why: 267 days average dwell time without runtime detection
 
-**Tools:** SBOM generation, vulnerability scanning, image signing
-
-**Goal:** Catch 80% of issues before they deploy
-
----
-
-## Security Foundation: Shield Right
-
-**Shield Right = Detect & Contain (Runtime)**
-
-- Detect what bypasses build controls
-- Zero-days, insider threats, misconfigurations
-- Continuous monitoring & response
-- Assume breach, limit blast radius
-
-**Tools:** Behavioral detection (Falco), network policies, observability
-
-**Statistics:** 200+ days average dwell time without runtime detection
-
-**Both Required:** Shift Left + Shield Right = Complete coverage
+**Both required.** Prevention alone is not enough.
 
 ---
 
-## Security Foundation: Zero Trust
+## Principles We'll Apply Throughout
 
-**Traditional Perimeter Model:**
-- Trust everything inside the firewall
-- Network location = implicit identity
-- Once breached, lateral movement is easy
-- Perimeter defense only
+**Zero Trust:** Never trust, always verify — even inside the cluster *(→ Groot)*
+**Supply Chain Security:** You don't control your dependencies — verify them *(→ Gamora)*
+**Security Observability:** Siloed tools miss correlated attacks *(→ Mantis)*
 
-**Problem:** Kubernetes has no perimeter!
+**Standard:** NIST SP 800-207 &nbsp;|&nbsp; **Framework:** SLSA (OpenSSF)
 
----
-
-## Zero Trust
-
-**Zero Trust Model:**
-- **Never trust, always verify**
-- **Identity-based access** (not network location)
-- **Assume breach** (segment everything)
-- **Continuous verification** (every request)
-
----
-
-## Zero Trust for Containers
-
-**Applied to Containers:**
-- Unsigned images → ❌ Blocked
-- Root containers → ❌ Denied
-- Flat networks → ❌ Segmented
-- No policies → ❌ Default deny
-
-**Standard:** NIST SP 800-207
-
----
-
-## Security Foundation: Supply Chain Security
-
-**The Problem:** Trust is a vulnerability
-
-**You don't control:**
-- Base images (Docker Hub, public registries)
-- Transitive dependencies (your deps pull other deps)
-- Build tools (npm, Maven, compilers)
-- Registry infrastructure (can be compromised)
-
-**Every layer is a potential attack vector**
-
----
-
-## Supply Chain: Real Attacks
-
-**Real-World Supply Chain Breaches:**
-
-- **SolarWinds (2020):** Build system compromised → 18,000 customers infected
-- **Codecov (2021):** Bash upload script modified → credentials stolen for months
-- **3CX (2023):** Desktop app trojanized → widespread supply chain malware
-- **Event-Stream NPM (2018):** Maintainer added Bitcoin wallet stealer
-- **Shai Hulud Worm (2025):** Malicious code in popular npm packages
-
-**Defense:** SLSA Framework (Levels 0-4)
-- **Level 2+** = Signed provenance, hardened builds
-
----
-
-## Security Foundation: Observability for Security
-
-**The Gap:** Siloed tools, siloed teams
-
-**Without Correlation:**
-- **Ops team:** "API is slow" (looks at Grafana)
-- **Security team:** "No alerts" (checks SIEM)
-- **Reality:** Crypto miner running for days
-- **Problem:** No one connects the dots
-
----
-
-## Observability: The Solution
-
-**With Correlation:**
-
-**Timeline:**
-- **9:00 AM:** API latency spike (APM traces)
-- **9:02 AM:** High CPU usage (Prometheus metrics)
-- **9:02 AM:** Suspicious process detected (Falco alert)
-
-**Context:** Same pod, same trace ID, same namespace
-
-**Result:** Detected in **minutes**, not days. Full forensic timeline.
-
-**Goal:** Mean Time To Respond (MTTR) < 1 hour
-
----
-
-## Why CNCF Projects?
-
-✅ **No vendor lock-in** (portable, multi-cloud)
-✅ **Community-driven** (thousands of contributors)
-✅ **Production-proven** (Fortune 500 usage)
-✅ **Composable** (designed to work together)
-✅ **Transparent roadmap** (public planning)
-
-**Maturity Levels:**
-- **Graduated:** Falco, OPA, Cilium, Prometheus
-- **Incubating:** Kyverno, OpenTelemetry, Sigstore
-- **Sandbox:** Trivy, Tetragon
+**Our tools:** CNCF-first — portable, community-driven, production-proven
+- **Graduated:** Falco, OPA, Cilium, Prometheus, Kyverno, OpenTelemetry
+- **Incubating:** Trivy, Sigstore
 
 ---
 
@@ -280,56 +158,55 @@ Multiple independent layers catch what others miss:
 ## Star-Lord: Security Concept
 ### Admission Control
 
-**Kubernetes Dynamic Admission Controllers** act as gatekeepers:
+**The checkpoint between `kubectl apply` and your cluster:**
 
-- Intercept API requests **before** objects are created
-- Validate against security policies
-- Mutate workloads to add security defaults
-- Deny non-compliant deployments
+- **Validate** → reject unsafe objects (unsigned images, root pods)
+- **Mutate** → inject security defaults (labels, resource limits)
+- Runs **before** objects are created in etcd
 
-**Think:** Airport security screening for container deployments
+**Think:** Airport security + customs — inspect, reject prohibited items, ensure required paperwork
 
 ---
 
 ## Star-Lord: Policy as Code
 
-**Why Policy as Code?**
+**Choose the simplest enforcement layer that solves the problem:**
 
-- **Version controlled:** Track all policy changes in Git
-- **Peer reviewed:** Security team approves policy updates
-- **Same policies everywhere:** CI/CD and production cluster
-- **Audit trail:** Who changed what and when
+| Layer | When to Use |
+|-------|-------------|
+| **Pod Security Admission (PSA)** | Baseline pod hardening — fastest built-in guardrail |
+| **ValidatingAdmissionPolicy (CEL)** | Simple custom validation — native, in-process (K8s v1.30+) |
+| **Kyverno / OPA Gatekeeper** | Advanced policies — mutation, reporting, external data |
 
-**CNCF Tools:**
-- **Kyverno** (YAML-based, Kubernetes-native)
-- **OPA/Gatekeeper** (Rego language, multi-platform)
+**All Policy as Code:** version controlled, peer reviewed, auditable
 
 ---
 
-## Star-Lord: Common Image Policy Patterns
+## Star-Lord: Image & Pod Policy Patterns
 
-**Image Security:**
+**Image Trust:**
 - Require signed images (verify with Cosign)
 - Block images from untrusted registries
-- Deny :latest tag (enforce immutable tags)
+- Deny `:latest` tag (enforce immutable tags)
 
----
-
-## Star-Lord: Common Pod Policy Patterns
-
-**Pod Security:**
+**Pod Hardening:**
 - Require non-root user
 - Disallow privileged containers
 - Drop all Linux capabilities by default
 
 ---
 
-## Star-Lord: Common Configure Policy Patterns
+## Star-Lord: Runtime & Governance Patterns
 
+**Runtime Boundaries:**
+- Block hostPath, hostNetwork, hostPID mounts
+- Enforce read-only root filesystem
+- Prevent privilege escalation
 
-**Configuration:**
-- Require resource limits
-- Enforce specific labels (team, cost-center)
+**Operational Governance:**
+- Require resource limits (CPU, memory)
+- Enforce required labels (team, cost-center)
+- Restrict allowed namespaces / service accounts
 
 ---
 
@@ -344,6 +221,8 @@ Multiple independent layers catch what others miss:
 4. Try root container → ❌ **Denied**
 5. Deploy compliant workload → ✅ **Success**
 
+<!-- Star-Lord decides what may enter. Next: Gamora verifies what enters is trustworthy. -->
+
 ---
 
 <!-- _class: lead -->
@@ -355,25 +234,31 @@ Multiple independent layers catch what others miss:
 
 ---
 
-## Gamora: Supply Chain Threats
+## Gamora: The Supply Chain Problem
 
-**Real-World Attacks:**
+**Trust is a vulnerability.** You don't control:
+- Base images (Docker Hub, public registries)
+- Transitive dependencies (your deps pull other deps)
+- Build tools & CI infrastructure (can be compromised)
 
-- **SolarWinds (2020):** Build system compromise → 18,000 customers infected
-- **Codecov (2021):** Bash uploader modified → credentials stolen for months
-- **3CX (2023):** Desktop app trojanized → supply chain malware
-- **Event-Stream NPM (2018):** Maintainer added Bitcoin stealer
-
-**Common Thread:** Trust without verification
+**Real-World Proof:**
+- **xz-utils (2024):** Trusted maintainer planted SSH backdoor after 2 years
+- **LiteLLM (2026):** Compromised security scanner → AI gateway backdoored on PyPI
+- **Axios NPM (2026):** Hijacked account → RAT delivered to 100M+ weekly downloaders
 
 ---
 
-## Gamora: Supply Chain Defense Layers
+## Gamora: Defense Progression
 
-**SBOM (Software Bill of Materials):**
-- Inventory of **all** components (direct + transitive dependencies)
-- Standards: SPDX, CycloneDX
-- **Value:** Know what's in your container
+**Each layer catches what the previous one can't:**
+
+**SBOM** → tells you *what's there* (inventory all components)
+↓
+**Scanning** → tells you *what's known-bad* (match CVE databases)
+↓
+**Signing** → tells you *who produced it* (cryptographic identity)
+↓
+**SLSA** → tells you *how trustworthy the build was* (provenance)
 
 ---
 
@@ -397,15 +282,14 @@ Multiple independent layers catch what others miss:
 
 ## Gamora: SLSA Framework
 
-**Supply chain Levels for Software Artifacts**
+**Supply chain Levels for Software Artifacts (v1.0)**
 
-- **Level 0:** No guarantees (status quo)
-- **Level 1:** Build provenance exists
-- **Level 2:** Signed provenance (tamper-proof)
-- **Level 3:** Hardened build platform
-- **Level 4:** Two-party review
+- **Build L0:** No guarantees (status quo)
+- **Build L1:** Build provenance exists
+- **Build L2:** Hosted build platform (tamper-resistant)
+- **Build L3:** Hardened build platform (isolated, auditable)
 
-**Goal:** Move from Level 0 → Level 2+ for production
+**Goal:** Move from L0 → L2+ for production
 
 **Standard:** OpenSSF (Open Source Security Foundation)
 
@@ -468,6 +352,10 @@ Multiple independent layers catch what others miss:
 - Distroless: ~2-20MB, <10 packages
 - **Result:** 60-80% fewer CVEs
 
+**Modern Options:**
+- **Google Distroless** (Debian-based, Bazel builds)
+- **Chainguard Images / Wolfi** (2,000+ images, nightly rebuilds, built-in SBOMs, near-zero CVEs)
+
 ---
 
 ## Rocket: Multi-Stage Builds
@@ -476,13 +364,13 @@ Multiple independent layers catch what others miss:
 
 ```dockerfile
 # Stage 1: Build (has compilers, tools)
-FROM node:18 AS builder
+FROM node:22 AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 
 # Stage 2: Runtime (minimal)
-FROM gcr.io/distroless/nodejs18-debian11
+FROM gcr.io/distroless/nodejs22-debian12
 COPY --from=builder /app /app
 USER nonroot:nonroot
 CMD ["app/index.js"]
@@ -497,13 +385,15 @@ CMD ["app/index.js"]
 
 **What We'll Show:**
 
-1. Scan "before" (node:18) → Count CVEs
+1. Scan "before" (node:22) → Count CVEs
 2. Scan "after" (distroless) → Count CVEs
 3. Compare: **60-80% reduction**
 4. Compare sizes: **50%+ smaller**
 5. Show: No shell in distroless container
 
 **Key Takeaway:** Minimal base = minimal risk
+
+<!-- Rocket ships a cleaner target. But once running, what is the container doing? -->
 
 ---
 
@@ -526,7 +416,7 @@ CMD ["app/index.js"]
 - **Insider threats** → Authorized malicious actions
 - **Configuration drift** → Runtime container changes
 
-**Statistics:** 200+ days average dwell time without runtime detection
+**Remember that 267-day dwell time?** Runtime detection is how you shrink it.
 
 **You need eyes on running containers**
 
@@ -546,6 +436,17 @@ CMD ["app/index.js"]
 **Used by:** Cilium, Falco, Tetragon, Pixie, Hubble
 
 **Industry consensus:** eBPF is the future of observability
+
+---
+
+## Drax: Detection vs. Enforcement
+
+**Falco** (CNCF Graduated) → **Detection** (alert on suspicious behavior)
+
+**Tetragon** (part of Cilium) → **Enforcement** (kill processes, block syscalls in-kernel)
+
+Use Falco for broad behavioral monitoring + alerting
+Use Tetragon when you need real-time kernel-level blocking
 
 ---
 
@@ -589,6 +490,8 @@ CMD ["app/index.js"]
 
 **Key Takeaway:** Detect malicious behavior instantly
 
+<!-- Drax detects the threat. Groot limits where it can go. -->
+
 ---
 
 <!-- _class: lead -->
@@ -616,46 +519,31 @@ CMD ["app/index.js"]
 
 ---
 
-## Groot: Traditional Principles
+## Groot: Zero Trust in Kubernetes
 
-**Traditional Perimeter Security:**
-- Trust everything inside the firewall
-- Network location = implicit trust
-- Breach = game over
+**Kubernetes has no perimeter** — so apply Zero Trust inside the cluster:
 
----
+- **Default deny** → no pod-to-pod traffic unless explicitly allowed
+- **Identity via labels** → `app=frontend` can reach `app=api`, not by IP
+- **Least privilege** → only the paths your app actually needs
+- **Namespace isolation** → dev cannot talk to prod
 
-## Groot: Zero Trust Principles
-
-**Zero Trust:**
-- **Never trust, always verify**
-- **Identity-based access** (pod labels, not IPs)
-- **Deny by default** (explicit allow only)
-- **Least privilege** (minimum necessary access)
-- **Continuous verification**
-
-**Standard:** NIST SP 800-207 (Zero Trust Architecture)
+**Like internal doors with locks — not an open-plan office**
 
 ---
 
 ## Groot: Kubernetes NetworkPolicies
 
-**How They Work:**
+**How They Work — by example:**
 
-- **Label selectors:** Match pods by labels (app=frontend)
-- **Ingress rules:** Who can connect TO this pod
-- **Egress rules:** Where this pod can connect TO
-- **Namespace boundaries:** Isolate tenants/environments
+- **Selector:** "This policy applies to pods labeled `app=api`"
+- **Ingress:** "Only `app=frontend` can call the API"
+- **Egress:** "API can only connect to `app=database`"
+- **Namespace:** "Nothing in `dev` can reach `prod`"
 
----
+**CNI Plugin Required:** Calico, Cilium (Docker Desktop doesn't support!)
 
-## Groot: Kubernetes NetworkPolicies
-
-**CNI Plugin Required:**
-- Calico, Cilium, Weave Net (Docker Desktop doesn't support!)
-- Use kind cluster for demos
-
-**Default:** Allow all → **Change to:** Deny all + explicit allow
+**Beyond L3/L4:** Service mesh (Istio, Linkerd) adds mTLS + L7 identity
 
 ---
 
@@ -672,6 +560,8 @@ CMD ["app/index.js"]
 6. Test: Frontend→API→DB works, rest blocked ✅
 
 **Key Takeaway:** Contain breaches, prevent lateral movement
+
+<!-- Groot limits where threats can go. Mantis shows you that they tried. -->
 
 ---
 
@@ -706,14 +596,17 @@ CMD ["app/index.js"]
 
 ---
 
-## Mantis: Correlated Signals
+## Mantis: The Capstone — Making Every Guardian Visible
 
-**Link Events Across Layers:**
+**Mantis correlates signals from all 5 other Guardians:**
 
-- **Application traces:** Distributed request flow (OpenTelemetry)
-- **Security events:** Falco alerts (behavioral anomalies)
-- **Network denials:** NetworkPolicy blocks (lateral movement attempts)
-- **Infrastructure metrics:** CPU spikes, memory pressure
+- ⚔️ **Gamora:** Build scan findings + SBOM data
+- 🎯 **Star-Lord:** Admission denials + policy violations
+- 🔧 **Rocket:** Image metadata + hardening status
+- 💪 **Drax:** Runtime alerts (Falco / Tetragon)
+- 🌳 **Groot:** NetworkPolicy denials (lateral movement attempts)
+
+**Shared context:** Pod name, namespace, timestamp, workload
 
 
 ---
@@ -761,92 +654,59 @@ CMD ["app/index.js"]
 
 ---
 
-## Tool Landscape Comparison
-
-| Layer | CNCF/OSS | AWS | Azure | GCP |
-|-------|----------|-----|-------|-----|
-| **Policy** | Kyverno, OPA | Pod Security | Azure Policy | Policy Controller |
-| **Supply Chain** | Trivy, Cosign | ECR Scan, Signer | ACR Scan | Artifact Registry |
-| **Runtime** | Falco | GuardDuty | Defender | Security Center |
-| **Network** | Calico, Cilium | VPC CNI | Azure CNI | GKE Dataplane V2 |
-| **Observability** | OTEL, Prometheus | CloudWatch | Azure Monitor | Cloud Monitoring |
-
----
-
-## Why We Chose These Tools
-
-| Guardian | Tool | CNCF Status | Why? |
-|----------|------|-------------|------|
-| Star-Lord | Kyverno | Incubating | YAML policies, K8s-native |
-| Gamora | Trivy + Cosign | Sandbox + Incubating | All-in-one, keyless signing |
-| Rocket | Distroless | OSS (Google) | Dramatic CVE reduction |
-| Drax | Falco | Graduated | Production-proven, rich rules |
-| Groot | Calico | CNCF | Standard policies, widely used |
-| Mantis | OpenTelemetry | Incubating | Vendor-neutral, industry standard |
-
----
-
-## Attack Scenario Walkthrough
+## How the Guardians Work Together
 
 **Scenario:** Cryptominer in compromised Node.js image
 
-| Attack Step | Guardian Response | Outcome |
-|-------------|-------------------|---------|
-| Poisoned base image | Gamora (scan & sign) | ❌ Missed |
-| Unsigned deployment | Star-Lord (policy gate) | ❌ Should block |
-| Mining process spawn | Drax (Falco detection) | ✅ Alert |
-| C2 network beacon | Groot (egress policy) | ✅ Blocked |
-| Lateral movement | Groot (segmentation) | ✅ Contained |
-| Timeline reconstruction | Mantis (observability) | ✅ Full context |
+| Attack Step | Guardian | Action | Result |
+|-------------|----------|--------|--------|
+| Poisoned base image | ⚔️ Gamora | Scan + SBOM detects known vuln | ⚠️ Catches known threats |
+| Bloated attack surface | 🔧 Rocket | Distroless reduces tooling | ✅ Less to exploit |
+| Unsigned deployment | 🎯 Star-Lord | Policy rejects unsigned image | ✅ Blocked at gate |
+| Mining process spawns | 💪 Drax | Falco detects anomalous process | ✅ Alert in seconds |
+| C2 network beacon | 🌳 Groot | Egress policy blocks connection | ✅ Contained |
+| Full timeline needed | 🔮 Mantis | Correlates all signals | ✅ MTTR < 1 hour |
+
+**Not every layer prevents — some reduce, some detect, some contain.**
 
 ---
 
 ## Container Security Maturity Model
 
-| Level | Characteristics | Priority |
-|-------|----------------|----------|
-| **Level 0: Ad-hoc** | Occasional scans, no policies | Add CI scanning |
-| **Level 1: Basic** | Automated scanning, basic monitoring | Add signing + NetworkPolicies |
-| **Level 2: Systematic** | Policy-driven, signed images, segmentation | Response automation + correlation |
-| **Level 3: Optimized** | Attestations, automated response, correlated observability | MTTR optimization, false positive tuning |
+**To reach the next level, do these things:**
+
+| Transition | Actions |
+|------------|---------|
+| **Level 0 → 1** | Image scanning in CI, Pod Security Admission (audit mode) |
+| **Level 1 → 2** | Image signing + verification, default-deny NetworkPolicies, secrets management |
+| **Level 2 → 3** | Runtime detection (Falco), observability correlation, service mesh (mTLS) |
+| **Level 3 → 4** | Attestations, automated response, MTTR optimization, false positive tuning |
 
 ---
 
-## Recommended Starting Stack
+## Your First Week
 
-**Minimum Viable Security (Weeks 1-4):**
+**Concrete Steps to Start Monday:**
 
-1. **Supply Chain:** Trivy (scan) + Cosign (sign)
-2. **Policy:** Kyverno (admission control)
-3. **Runtime:** Falco (detection)
-4. **Network:** Kubernetes NetworkPolicies
+🔍 **Day 1:** Run `trivy image` on your top 5 production images
+📋 **Day 2:** Generate your first SBOM with `syft` → know your dependencies
+🔒 **Day 3:** Apply `Restricted` Pod Security Standard to one namespace (audit mode)
+🌐 **Day 4:** Apply default-deny NetworkPolicy to one namespace
+👁️ **Day 5:** Deploy Falco in dry-run mode → see what it detects
+
+**Don't boil the ocean: pick one namespace, one app, one pipeline.**
 
 ---
 
 ## Key Takeaways
 
-1. **Defense in Depth** - No single tool is enough
-2. **Shift Left + Shield Right** - Both are required
-3. **CNCF-First** - Portable, community-driven, proven
-4. **Start Small** - Pick 1-2 tools, prove value, expand
-5. **Measure Progress** - CVEs blocked, MTTR, coverage %
+1. **Defense in Depth** — No single tool is enough
+2. **Shift Left + Shield Right** — Prevention AND detection required
+3. **Principles First, Tools Second** — Pick controls you can actually run consistently
+4. **Start Small** — One namespace, one pipeline, prove value, expand
+5. **Measure Progress** — CVEs blocked, MTTR, coverage %
 
-**"We are layered"** - Security is a team sport
-
----
-
-## Resources
-
-**Repository:** github.com/codebytes/container-security
-- All 6 demos with bash scripts
-- Setup scripts for kind cluster
-- Complete slide deck
-
-**Slides:** chris-ayers.com/container-security
-
-**CNCF Resources:**
-- Cloud Native Security Whitepaper
-- CNCF Security TAG (github.com/cncf/tag-security)
+**"We are layered"** — Security is a team sport
 
 ---
 
@@ -856,18 +716,21 @@ CMD ["app/index.js"]
 
 ---
 
-# Resources
+# Resources & Links
 
 <div class="columns">
 <div>
 
-**"We are layered - Security is a team sport!"**
+**"We are layered — Security is a team sport!"**
 
-## Links
+## Repo & Links
 
+- **Repo:** [github.com/codebytes/container-security](https://github.com/codebytes/container-security)
+- **Slides:** [chris-ayers.com/container-security](https://chris-ayers.com/container-security)
 - [NIST SP 800-207](https://csrc.nist.gov/publications/detail/sp/800-207/final)
-- [Shai Hulud Worm](https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem)
-- [Supply-chain Levels for Software Artifacts (SLSA)](https://slsa.dev/)
+- [SLSA Framework](https://slsa.dev/)
+- [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes)
+- [CNCF Security TAG](https://github.com/cncf/tag-security)
 
 </div>
 <div>
