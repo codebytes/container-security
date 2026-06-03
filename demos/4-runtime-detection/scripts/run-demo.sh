@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEMO_DIR="$(dirname "$SCRIPT_DIR")"
+MANIFESTS_DIR="$DEMO_DIR/manifests"
+
 # Interactive pause function
 pause() {
     echo ""
+    if [[ "${DEMO_AUTOMATED:-false}" == "true" || ! -t 0 ]]; then
+        echo -e "\033[33m[automated mode] continuing...\033[0m"
+        return
+    fi
     echo -e "\033[33mPress Enter to continue...\033[0m"
     read -r
 }
@@ -37,7 +45,7 @@ helm repo add falcosecurity https://falcosecurity.github.io/charts 2>/dev/null |
 helm repo update > /dev/null
 helm upgrade --install falco falcosecurity/falco \
   --namespace falco \
-  --values ../manifests/falco-values.yaml \
+  --values "$MANIFESTS_DIR/falco-values.yaml" \
   --wait
 echo ""
 echo "✅ Falco installed with custom rules"
@@ -59,10 +67,10 @@ echo "  - Modifying cron configurations"
 echo ""
 
 # Delete existing trigger pod if it exists to ensure fresh run
-kubectl delete -f ../manifests/trigger-pod.yaml --ignore-not-found > /dev/null 2>&1 || true
+kubectl delete -f "$MANIFESTS_DIR/trigger-pod.yaml" --ignore-not-found > /dev/null 2>&1 || true
 sleep 2
 
-kubectl apply -f ../manifests/trigger-pod.yaml
+kubectl apply -f "$MANIFESTS_DIR/trigger-pod.yaml"
 echo "Waiting for trigger pod to execute suspicious actions..."
 sleep 8
 echo "✅ Trigger pod executed multiple suspicious actions"
@@ -75,7 +83,7 @@ echo ""
 
 # Try multiple times to catch alerts
 for i in {1..3}; do
-    ALERTS=$(kubectl logs -n falco daemonset/falco -c falco --since=30s 2>/dev/null | grep "Write below /etc detected" || true)
+    ALERTS=$(kubectl logs -n falco daemonset/falco -c falco --since=30s 2>/dev/null | grep "Write below /etc detected" | grep "namespace=demo-drax" || true)
     if [[ -n "$ALERTS" ]]; then
         echo -e "\033[32m✅ Found Falco alerts!\033[0m"
         echo ""
@@ -94,7 +102,7 @@ for i in {1..3}; do
 
         echo ""
         echo -e "\033[36mSample alert details:\033[0m"
-        kubectl logs -n falco daemonset/falco -c falco --since=30s 2>/dev/null | grep "Write below /etc detected" | head -3
+        kubectl logs -n falco daemonset/falco -c falco --since=30s 2>/dev/null | grep "Write below /etc detected" | grep "namespace=demo-drax" | head -3
         break
     else
         if [[ $i -lt 3 ]]; then
@@ -108,7 +116,7 @@ for i in {1..3}; do
             echo "  - The trigger pod hasn't executed yet"
             echo ""
             echo "Try checking manually:"
-            echo "  kubectl logs -n falco daemonset/falco -c falco --tail=50 | grep -i 'etc'"
+            echo "  kubectl logs -n falco daemonset/falco -c falco --tail=50 | grep 'namespace=demo-drax'"
             echo "  kubectl logs -n demo-drax falco-trigger"
         fi
     fi
@@ -118,7 +126,7 @@ pause
 
 echo -e "\033[36m[5/5] Cleanup\033[0m"
 echo "Removing trigger pod..."
-kubectl delete -f ../manifests/trigger-pod.yaml --ignore-not-found
+kubectl delete -f "$MANIFESTS_DIR/trigger-pod.yaml" --ignore-not-found
 echo ""
 echo -e "\033[33mNote:\033[0m Falco remains installed for further exploration."
 echo "To view live alerts: kubectl logs -n falco daemonset/falco -f"

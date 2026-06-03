@@ -1,0 +1,45 @@
+# SIGNED image -> EXPECTED ADMITTED by the verify-supply-chain-signatures policy.
+#
+# Image is referenced by the IN-CLUSTER registry name `registry:5000` so both
+# Kyverno's signature lookup and the kubelet image pull resolve to the shared
+# kind-network registry. The host pushed + cosign-signed
+# `localhost:5000/guardian-demo-app:v0.1.0-secure` (same registry/repo/digest).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardian-signed
+  namespace: demo-gamora
+  labels:
+    app: guardian-signed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guardian-signed
+  template:
+    metadata:
+      labels:
+        app: guardian-signed
+        # Satisfies the require-minimum-scan-level rule (scan evidence label).
+        guardian.dev/last-scan: "high-critical-clear"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        # Numeric UID is REQUIRED for the kubelet to verify runAsNonRoot.
+        # Matches the distroless `USER 65532` in pipeline/Dockerfile.
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: registry:5000/guardian-demo-app:v0.1.0-secure
+          ports:
+            - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

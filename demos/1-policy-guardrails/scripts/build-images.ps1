@@ -143,6 +143,21 @@ Write-Host "[4/4] Verification" -ForegroundColor Cyan
 Write-Host "Listing built images:"
 docker images | Select-String $ImageName
 
+# When building local images (not pushing to a registry), make them reachable by
+# the shared kind cluster node. Demo 1 uses UNsigned local images, so `kind load`
+# is the simplest correct delivery path (demo 2 stays registry-centric for signing).
+if (-not $Push) {
+    $KindCluster = if ($env:KIND_CLUSTER) { $env:KIND_CLUSTER } else { "container-security" }
+    $kindAvailable = Get-Command kind -ErrorAction SilentlyContinue
+    if ($kindAvailable -and ((kind get clusters 2>$null) -contains $KindCluster)) {
+        Write-Host "Loading images into kind cluster '$KindCluster'..." -ForegroundColor Cyan
+        kind load docker-image $SecureTag $InsecureTag --name $KindCluster
+        Write-Host "✅ Images loaded into the kind node" -ForegroundColor Green
+    } else {
+        Write-Host "ℹ️  kind cluster '$KindCluster' not detected; skipping kind load." -ForegroundColor Yellow
+    }
+}
+
 Write-Host ""
 Write-Host "✅ Image build completed successfully!" -ForegroundColor Green
 Write-Host ""

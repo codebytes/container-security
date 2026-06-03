@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-gamora
+  labels:
+    app.kubernetes.io/part-of: container-security-demos
+    guardian.dev/demo: supply-chain-trust

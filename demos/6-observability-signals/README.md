@@ -6,15 +6,15 @@ Connect application telemetry (OpenTelemetry), runtime security alerts (Falco), 
 ## Outcomes
 - Deploy an instrumented demo API emitting traces/metrics/logs via OpenTelemetry.
 - Run an OpenTelemetry Collector that exports data to Prometheus and Loki-compatible outputs.
-- Forward Falco alerts into the same pipeline via Falcosidekick HTTP sink.
-- Visualize correlated events (trace spans referencing Falco alert ID, logs showing blocked network attempt).
+- Forward Falco alerts into the same pipeline via Falcosidekick → OTLP adapter.
+- Visualize correlated events by pod, namespace, and timestamp (app spans plus Falco log records); Falco alerts do not share application trace IDs.
 
 ## Prerequisites
 - Kubernetes cluster with `kubectl` access.
 - `helm` 3.x.
 - `docker` or `nerdctl` (for optional local builds).
-- Falco demo (from `demos/runtime-detection`) installed or re-run for alert generation.
-- Prometheus & Loki stack (e.g., Grafana Agent / kube-prom-stack). For lightweight demo, we leverage `grafana/agent` Helm chart.
+- Falco demo (`demos/4-runtime-detection`) installed or re-run for alert generation.
+- No external Prometheus/Loki stack is required for the lightweight path: the collector logs spans/logs and exposes Prometheus-format metrics on port 9464.
 
 ## Environment Variables
 ```powershell
@@ -31,7 +31,8 @@ $env:IMAGE_TAG = "ghcr.io/codebytes/guardian-telemetry:0.1.0"
    - Build/push image (`app/Dockerfile`) or set repo digest; update `manifests/instrumented-api.yaml` if needed.
    - Apply manifest so pods export OTLP spans/metrics/logs to collector.
 3. **Connect Falco Alerts**
-   - Install Falcosidekick (reuse runtime demo cluster) using `manifests/falcosidekick-config.yaml` values to POST alerts → OTEL collector (logs pipeline).
+   - Install Falcosidekick using `manifests/falcosidekick-config.yaml` and deploy `manifests/falco-otlp-adapter.yaml` to translate Falcosidekick JSON webhooks into OTLP logs.
+   - If the `falco` Helm release from demo 4 exists, the Bash script configures Falco `http_output` to post to Falcosidekick automatically.
 4. **Trigger Events**
    - Run load job (`manifests/load-generator.yaml`) to produce standard traces/metrics.
    - Trigger Falco rule (from runtime demo) to create security alert referencing namespace/pod.
@@ -51,7 +52,7 @@ $env:IMAGE_TAG = "ghcr.io/codebytes/guardian-telemetry:0.1.0"
 | `manifests/falcosidekick-config.yaml` | Falcosidekick values override pointing to OTEL collector |
 | `manifests/load-generator.yaml` | Busybox or k6 job hitting API |
 | `dashboards/observability.json` | Grafana dashboard (requires mapped datasources) |
-| `scripts/run-demo.ps1` | Automates setup, triggers events, and prints links |
+| `scripts/run-demo.sh` / `scripts/run-demo.ps1` | Automates setup, triggers events, and prints links. Set `DEMO_AUTOMATED=true` for non-interactive Bash runs. |
 
 ## Verification Checklist
 - [ ] OTEL Collector pods running and receiving spans.

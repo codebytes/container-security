@@ -37,11 +37,21 @@ spec:
             - name: OTEL_LOGS_EXPORTER
               value: otlp
           securityContext:
+            # runAsNonRoot MUST be paired with a numeric runAsUser so the
+            # kubelet can verify the container is non-root (repo-wide rule).
+            # 65532 matches the numeric USER 65532 baked into the image.
             runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+          volumeMounts:
+            # Writable scratch dir required because the root FS is read-only;
+            # HOME/TMPDIR in the image point here.
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 50m
@@ -57,6 +67,9 @@ spec:
             httpGet:
               path: /health
               port: 8080
+      volumes:
+        - name: tmp
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

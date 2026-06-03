@@ -1,9 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEMO_DIR="$(dirname "$SCRIPT_DIR")"
+APP_DIR="$DEMO_DIR/app"
+COLLECTOR_DIR="$DEMO_DIR/collector"
+MANIFESTS_DIR="$DEMO_DIR/manifests"
+
 # Interactive pause function
 pause() {
     echo ""
+    if [[ "${DEMO_AUTOMATED:-false}" == "true" || ! -t 0 ]]; then
+        echo -e "\033[33m[automated mode] continuing...\033[0m"
+        return
+    fi
     echo -e "\033[33mPress Enter to continue...\033[0m"
     read -r
 }
@@ -25,7 +35,7 @@ pause
 
 echo -e "\033[36m[1/9] Building telemetry image locally\033[0m"
 echo "Building instrumented Python app..."
-pushd ../app > /dev/null
+pushd "$APP_DIR" > /dev/null
 docker build -t "$IMAGE" .
 popd > /dev/null
 echo "✅ Image built"
@@ -57,7 +67,7 @@ echo "✅ Namespace ready"
 pause
 
 echo -e "\033[36m[3/9] Deploying OpenTelemetry collector\033[0m"
-kubectl apply -f ../collector/otel-collector.yaml --namespace "$NAMESPACE"
+kubectl apply -f "$COLLECTOR_DIR/otel-collector.yaml" --namespace "$NAMESPACE"
 kubectl rollout status deployment/otel-collector -n "$NAMESPACE"
 echo "✅ OTEL collector running"
 
@@ -65,12 +75,28 @@ pause
 
 echo -e "\033[36m[4/9] Installing Falcosidekick\033[0m"
 echo "Connecting Falco to OpenTelemetry..."
+echo "Deploying Falco→OTLP adapter (translates Falco webhooks into OTLP logs)..."
+kubectl apply -f "$MANIFESTS_DIR/falco-otlp-adapter.yaml" -n "$NAMESPACE"
+kubectl rollout status deployment/falco-otlp-adapter -n "$NAMESPACE"
 helm repo add falcosecurity https://falcosecurity.github.io/charts > /dev/null 2>&1 || true
 helm repo update > /dev/null
 helm upgrade --install falcosidekick falcosecurity/falcosidekick \
   --namespace falco \
   --create-namespace \
-  -f ../manifests/falcosidekick-config.yaml
+  -f "$MANIFESTS_DIR/falcosidekick-config.yaml" \
+  --wait
+if helm status falco -n falco >/dev/null 2>&1; then
+  echo "Configuring Falco HTTP output to send alerts to Falcosidekick..."
+  helm upgrade falco falcosecurity/falco \
+    --namespace falco \
+    --reuse-values \
+    --set falco.json_output=true \
+    --set falco.http_output.enabled=true \
+    --set falco.http_output.url=http://falcosidekick.falco.svc.cluster.local:2801/ \
+    --wait
+else
+  echo "⚠️  Falco release not found. Run demo 4 first to generate security alerts."
+fi
 echo "✅ Falcosidekick configured"
 
 pause
@@ -79,7 +105,7 @@ echo -e "\033[36m[5/9] Deploying instrumented API\033[0m"
 echo "Starting Python app with OpenTelemetry..."
 # Ensure namespace exists
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - > /dev/null
-kubectl apply -f ../manifests/instrumented-api.yaml -n "$NAMESPACE"
+kubectl apply -f "$MANIFESTS_DIR/instrumented-api.yaml" -n "$NAMESPACE"
 echo "Waiting for pod to be ready..."
 kubectl wait --for=condition=available --timeout=120s deployment/guardian-telemetry -n "$NAMESPACE" || {
     echo "Deployment failed. Checking status..."
@@ -93,7 +119,7 @@ pause
 
 echo -e "\033[36m[6/9] Generating test traffic\033[0m"
 echo "Creating traces and metrics..."
-kubectl apply -f ../manifests/load-generator.yaml -n "$NAMESPACE"
+kubectl apply -f "$MANIFESTS_DIR/load-generator.yaml" -n "$NAMESPACE"
 kubectl wait --for=condition=complete job/telemetry-load -n "$NAMESPACE" --timeout=120s
 echo "✅ Traffic generated"
 echo ""

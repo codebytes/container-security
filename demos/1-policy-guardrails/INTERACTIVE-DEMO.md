@@ -223,7 +223,7 @@ Or run the automated cleanup:
 
 **Pods not being blocked**: 
 - Ensure 15+ seconds have passed after policy installation
-- Check admission webhook status: `kubectl get validatingadmissionpolicies`
+- Check policy status: `kubectl get clusterpolicy require-nonroot-demo -o yaml`
 
 **Image pull errors**:
 - Demo uses local images (`guardian-demo:secure`, `guardian-demo:insecure`)

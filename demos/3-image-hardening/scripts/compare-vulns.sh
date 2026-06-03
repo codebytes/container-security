@@ -1,17 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BEFORE_REPORT="${1:-../reports/before.txt}"
-AFTER_REPORT="${2:-../reports/after.txt}"
+# Counts real Trivy findings from JSON reports. Defaults to the JSON output
+# produced by run-demo.sh. Grepping the human-readable table is unreliable
+# (it counts legend/header lines), so we parse JSON with jq instead.
+BEFORE_REPORT="${1:-../reports/before.json}"
+AFTER_REPORT="${2:-../reports/after.json}"
+
+if ! command -v jq &> /dev/null; then
+    echo "jq is required to parse Trivy JSON reports. Install jq and retry." >&2
+    exit 1
+fi
 
 get_vuln_count() {
     local report_path="$1"
     if [[ ! -f "$report_path" ]]; then
-        echo "Report not found: $report_path" >&2
+        echo "Report not found: $report_path (run ./run-demo.sh to generate JSON reports)" >&2
         exit 1
     fi
-    local critical=$(grep -c "CRITICAL" "$report_path" || true)
-    local high=$(grep -c "HIGH" "$report_path" || true)
+    local critical high
+    critical=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' "$report_path")
+    high=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' "$report_path")
     echo "$critical $high"
 }
 

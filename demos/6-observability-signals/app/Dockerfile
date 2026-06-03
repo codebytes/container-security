@@ -6,8 +6,14 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . ./
 
-RUN addgroup --system app && adduser --system --ingroup app app
-USER app
+# Run as a NUMERIC non-root UID (65532, the repo-wide nonroot convention).
+# A numeric USER lets Kubernetes verify runAsNonRoot without a passwd entry,
+# and must be paired with runAsUser: 65532 in the pod securityContext.
+# HOME/TMPDIR point at /tmp so the app has a writable path under
+# readOnlyRootFilesystem (the manifest mounts an emptyDir at /tmp).
+ENV HOME=/tmp \
+    TMPDIR=/tmp
+USER 65532
 
 EXPOSE 8080
 ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317

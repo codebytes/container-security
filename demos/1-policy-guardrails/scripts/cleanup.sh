@@ -39,12 +39,12 @@ kubectl get crd | grep kyverno | awk '{print $1}' | xargs -r kubectl delete crd 
 kubectl get crd | grep wgpolicyk8s | awk '{print $1}' | xargs -r kubectl delete crd --ignore-not-found
 kubectl get clusterrole | grep kyverno | awk '{print $1}' | xargs -r kubectl delete clusterrole --ignore-not-found
 kubectl get clusterrolebinding | grep kyverno | awk '{print $1}' | xargs -r kubectl delete clusterrolebinding --ignore-not-found
+kubectl delete namespace kyverno --ignore-not-found >/dev/null 2>&1 || true
 
 echo "✅ Kyverno completely removed"
 
 echo -e "${CYAN}[4/4] Cleaning up temporary files${NC}"
-rm -f /tmp/unsigned-result.txt /tmp/root-result.txt /tmp/test-root-pod.yaml
-rm -f unsigned-result.txt root-result.txt
+rm -f unsigned-result.txt root-result.txt test-root-pod.yaml
 echo "✅ Temporary files cleaned"
 
 echo ""

@@ -1,18 +1,24 @@
 # syntax=docker/dockerfile:1.6
 
-FROM python:3.11-slim AS build
+# Base images are pinned by digest for reproducible, tamper-evident builds.
+# Digests resolved 2026-05-30 via `docker buildx imagetools inspect <ref>`.
+# To refresh: re-resolve the digest for the desired tag and replace below.
+#   python:3.11-slim                     -> sha256:a3ab0b96...e49ac0
+#   gcr.io/distroless/python3-debian12   -> sha256:2fdb0540...73731f
+FROM python:3.11-slim@sha256:a3ab0b966bc4e91546a033e22093cb840908979487a9fc0e6e38295747e49ac0 AS build
 WORKDIR /app
 ENV PIP_NO_CACHE_DIR=1
 COPY app/ /app/
-RUN useradd --create-home --shell /usr/sbin/nologin appuser && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-FROM gcr.io/distroless/python3-debian12
+FROM gcr.io/distroless/python3-debian12@sha256:2fdb05402a2cf21cf78fdb3ba4c5db167241e9e498140f5bf689d7efb773731f
 WORKDIR /app
 COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=build /etc/passwd /etc/passwd
 COPY --from=build /app /app
-USER appuser
+# distroless ships a built-in non-root user at numeric UID 65532. Using the
+# numeric UID (not a name) lets Kubernetes `runAsNonRoot: true` verify the
+# user at admission without needing an /etc/passwd entry.
+USER 65532
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8080
 ENTRYPOINT ["python", "/app/main.py"]

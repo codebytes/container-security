@@ -1,24 +1,18 @@
-# NOTE: Falcosidekick sends its own JSON format to webhook endpoints, NOT
-# OTLP-compatible JSON. The OTEL collector's OTLP HTTP receiver (/v1/logs)
-# will reject Falcosidekick payloads. In production, deploy a format adapter
-# (e.g., a lightweight HTTP service or FluentBit) between Falcosidekick and
-# the OTLP collector to transform Falco events into OTLP log records.
-# For this demo we send to a generic HTTP receiver on the collector.
-falcosidekick:
-  replicaCount: 1
-  image:
-    repository: falcosecurity/falcosidekick
-    tag: latest
-  config:
-    customfields: "guardian.demo=observability"
-    outputs:
-      slack:
-        enabled: false
-      loki:
-        enabled: false
-      webhook:
-        enabled: true
-        # Generic HTTP endpoint — NOT the OTLP /v1/logs path (see note above)
-        address: "http://otel-collector.demo-mantis.svc.cluster.local:4318/webhook/falco"
-  serviceAccount:
-    create: true
+# NOTE: Falcosidekick emits its own JSON webhook format, NOT OTLP. The OTEL
+# collector's OTLP HTTP receiver (/v1/logs) only accepts OTLP payloads, so we
+# route Falcosidekick through the small falco-otlp-adapter (deployed via
+# manifests/falco-otlp-adapter.yaml). The adapter translates each Falco alert
+# into an OTLP log record and forwards it to the collector's logs pipeline,
+# giving us a genuine traces + metrics + logs(+security) correlation.
+replicaCount: 1
+image:
+  repository: falcosecurity/falcosidekick
+  tag: "2.31.1"
+config:
+  customfields: "guardian.demo=observability"
+  webhook:
+    # Falco -> OTLP adapter (see manifests/falco-otlp-adapter.yaml), which
+    # forwards translated alerts to the collector's OTLP /v1/logs receiver.
+    address: "http://falco-otlp-adapter.demo-mantis.svc.cluster.local:8080/webhook/falco"
+serviceAccount:
+  create: true

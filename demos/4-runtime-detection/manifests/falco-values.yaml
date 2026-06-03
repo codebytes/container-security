@@ -1,3 +1,8 @@
+# Single source of truth for the demo's custom Falco rule.
+# The rule is delivered to Falco via the Helm chart's `customRules` value,
+# which renders a ConfigMap the chart already mounts into /etc/falco/rules.d.
+# Do NOT reintroduce a hand-rolled ConfigMap + DaemonSet patch: that drifts on
+# the next `helm upgrade` and mounts into a subdirectory Falco does not load.
 driver:
   kind: modern_ebpf
 
@@ -10,7 +15,7 @@ customRules:
       condition: >
         evt.type in (open,openat,openat2) and
         evt.is_open_write=true and
-        fd.name startswith "/etc" and
+        fd.name startswith "/etc/" and
         container.id != host
       output: >
         Write below /etc detected

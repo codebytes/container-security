@@ -3,9 +3,8 @@ kind: ClusterPolicy
 metadata:
   name: verify-supply-chain-signatures
 spec:
-  validationFailureAction: Enforce
   background: false
-  webhookTimeoutSeconds: 15
+  webhookTimeoutSeconds: 30
   rules:
     - name: require-signed-images
       match:
@@ -13,24 +12,81 @@ spec:
           - resources:
               kinds:
                 - Pod
+              # Scope to the demo namespace so the policy can't block unrelated
+              # (or system) pods cluster-wide. The signed-vs-unsigned demo runs
+              # entirely in `demo-gamora`.
+              namespaces:
+                - demo-gamora
       verifyImages:
+        # IMPORTANT (in-cluster resolvability): Kyverno's image-verification Go
+        # client resolves registry DNS through the CLUSTER, NOT through
+        # containerd's `certs.d/.../hosts.toml` alias. So it must reference the
+        # kind-network registry by its in-cluster name `registry:5000`, NOT
+        # `localhost:5000` (which resolves to Kyverno's own loopback and fails
+        # CLOSED for every image — no real signature discrimination).
+        #
+        # The host pushes/signs to `localhost:5000/guardian-demo-app:...`; that
+        # is the SAME registry container as `registry:5000` in-cluster (same
+        # repository + digest), so cosign signatures pushed from the host are
+        # resolvable here and verification works.
         - imageReferences:
-            - "ghcr.io/codebytes/guardian-demo-app*"
+            - "registry:5000/guardian-demo-app*"
+          # Enforce = DENY admission on failure (real gate, not Audit).
+          # mutateDigest:false  -> don't rewrite the pod's image to a digest.
+          # verifyDigest:false  -> allow tag-based refs (Kyverno still resolves
+          #                        the digest internally to locate the .sig).
+          # required:true       -> a matching signature MUST exist.
+          # Net effect: a validly-signed image is ADMITTED; an unsigned or
+          # tampered image is REJECTED.
+          failureAction: Enforce
+          mutateDigest: false
+          verifyDigest: false
+          required: true
           attestors:
-            - entries:
+            - count: 1
+              entries:
+                # Real cosign public key, injected at runtime from the SAME key
+                # pair that signed the image (no private key in git). Create the
+                # secret from your local cosign.pub:
+                #   kubectl -n kyverno create secret generic guardian-cosign-pub \
+                #     --from-file=cosign.pub=cosign.pub \
+                #     --dry-run=client -o yaml | kubectl apply -f -
+                # Kyverno reads the `cosign.pub` entry from this secret. Using a
+                # secret (vs hard-coding a PEM) keeps the policy valid no matter
+                # which key pair the presenter generates.
                 - keys:
-                    publicKeys: |-
-                      -----BEGIN PUBLIC KEY-----
-                      <INSERT YOUR cosign.pub CONTENTS HERE>
-                      -----END PUBLIC KEY-----
+                    publicKeys: "k8s://kyverno/guardian-cosign-pub"
+                    # run-pipeline.sh signs with --tlog-upload=false (offline/local
+                    # demo: no Rekor transparency-log entry). Without this, Kyverno
+                    # v1.18 fails CLOSED demanding a tlog entry and rejects even the
+                    # correctly-SIGNED image ("signature not found in transparency
+                    # log"). ignoreTlog:true makes verification rely solely on the
+                    # public key. NOTE: this lives under the key attestor as
+                    # `rekor.ignoreTlog` (NOT under `ctlog`, which only exposes
+                    # ignoreSCT/pubkey/tsaCertChain and is rejected by strict decode).
+                    rekor:
+                      ignoreTlog: true
+                # --- Inline alternative (no secret) --------------------------------
+                # Replace the `keys` block above with the literal PEM of YOUR
+                # cosign.pub (it MUST match the cosign.key that signed the image).
+                # The committed demo public key is, for reference:
+                #   keys:
+                #     publicKeys: |-
+                #       -----BEGIN PUBLIC KEY-----
+                #       MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6wxQZxfzLX5pmkDUJzTQJhSFITj2
+                #       Fx9uZWGTnG90yND5yLQ5T2S/uoJ3+FMJ4+jnPSC9N+JY+ndEExK0QX8hEg==
+                #       -----END PUBLIC KEY-----
     - name: require-minimum-scan-level
       match:
         any:
           - resources:
               kinds:
                 - Pod
+              namespaces:
+                - demo-gamora
       validate:
-        message: "Image must be labeled with vulnerability report showing no HIGH/CRITICAL findings"
+        failureAction: Enforce
+        message: "Image must be labeled with vulnerability report showing no HIGH/CRITICAL findings (guardian.dev/last-scan=high-critical-clear)"
         pattern:
           metadata:
             labels:

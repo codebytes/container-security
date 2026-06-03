@@ -26,17 +26,43 @@ echo ""
 # Create reports directory
 mkdir -p "${REPORTS_DIR}"
 
-# Function to count vulnerabilities
+# Function to count vulnerabilities of a given severity from a Trivy JSON report.
+# Counts real findings across ALL targets (OS packages + language packages),
+# which is why we scan with `--format json` instead of grepping the table
+# output (grep on the table counts legend/header lines, not vulnerabilities).
 count_vulns() {
-    local report_file="$1"
+    local json_file="$1"
     local severity="$2"
 
-    if [[ ! -f "$report_file" ]]; then
+    if [[ ! -f "$json_file" ]]; then
         echo "0"
         return
     fi
 
-    grep -c "$severity" "$report_file" 2>/dev/null || echo "0"
+    if command -v jq &> /dev/null; then
+        jq --arg sev "$severity" \
+            '[.Results[]?.Vulnerabilities[]? | select(.Severity == $sev)] | length' \
+            "$json_file" 2>/dev/null || echo "0"
+    else
+        echo "0"
+    fi
+}
+
+# Writes a minimal Trivy-shaped JSON report so count_vulns still works when
+# Trivy/Docker are unavailable. The counts mirror the committed real reports
+# (reports/before.txt, reports/after.txt) so every "truth" stays consistent.
+write_fallback_json() {
+    local file="$1" crit="$2" high="$3" med="$4" low="$5"
+    if command -v jq &> /dev/null; then
+        jq -n \
+            --argjson c "$crit" --argjson h "$high" \
+            --argjson m "$med" --argjson l "$low" '
+            {Results: [{Target: "fallback (simulated)", Vulnerabilities:
+                ([range(0; $c) | {Severity: "CRITICAL"}] +
+                 [range(0; $h) | {Severity: "HIGH"}]   +
+                 [range(0; $m) | {Severity: "MEDIUM"}] +
+                 [range(0; $l) | {Severity: "LOW"}])}]}' > "$file"
+    fi
 }
 
 # Function to get image size
@@ -56,17 +82,16 @@ echo -e "${GREEN}✅ Baseline image built successfully${NC}"
 echo ""
 echo -e "${YELLOW}Step 2: Scanning baseline image with Trivy...${NC}"
 if command -v trivy &> /dev/null; then
+    trivy image --format json --output "${REPORTS_DIR}/before.json" "$IMAGE_BEFORE" && \
     trivy image --format table --output "${REPORTS_DIR}/before.txt" "$IMAGE_BEFORE" && {
         echo -e "${GREEN}✅ Baseline scan completed${NC}"
     } || {
-        echo -e "${YELLOW}⚠️  Trivy scan failed - creating simulated report${NC}"
-        echo "CRITICAL vulnerabilities: 45" > "${REPORTS_DIR}/before.txt"
-        echo "HIGH vulnerabilities: 78" >> "${REPORTS_DIR}/before.txt"
+        echo -e "${YELLOW}⚠️  Trivy scan failed - writing simulated JSON (counts match committed reports)${NC}"
+        write_fallback_json "${REPORTS_DIR}/before.json" 41 468 1319 1609
     }
 else
-    echo -e "${YELLOW}⚠️  Trivy not available - creating simulated report${NC}"
-    echo "CRITICAL vulnerabilities: 45" > "${REPORTS_DIR}/before.txt"
-    echo "HIGH vulnerabilities: 78" >> "${REPORTS_DIR}/before.txt"
+    echo -e "${YELLOW}⚠️  Trivy not available - writing simulated JSON (counts match committed reports)${NC}"
+    write_fallback_json "${REPORTS_DIR}/before.json" 41 468 1319 1609
 fi
 
 echo ""
@@ -80,28 +105,27 @@ echo -e "${GREEN}✅ Hardened image built successfully${NC}"
 echo ""
 echo -e "${YELLOW}Step 4: Scanning hardened image with Trivy...${NC}"
 if command -v trivy &> /dev/null; then
+    trivy image --format json --output "${REPORTS_DIR}/after.json" "$IMAGE_AFTER" && \
     trivy image --format table --output "${REPORTS_DIR}/after.txt" "$IMAGE_AFTER" && {
         echo -e "${GREEN}✅ Hardened scan completed${NC}"
     } || {
-        echo -e "${YELLOW}⚠️  Trivy scan failed - creating simulated report${NC}"
-        echo "CRITICAL vulnerabilities: 2" > "${REPORTS_DIR}/after.txt"
-        echo "HIGH vulnerabilities: 8" >> "${REPORTS_DIR}/after.txt"
+        echo -e "${YELLOW}⚠️  Trivy scan failed - writing simulated JSON (counts match committed reports)${NC}"
+        write_fallback_json "${REPORTS_DIR}/after.json" 2 6 11 30
     }
 else
-    echo -e "${YELLOW}⚠️  Trivy not available - creating simulated report${NC}"
-    echo "CRITICAL vulnerabilities: 2" > "${REPORTS_DIR}/after.txt"
-    echo "HIGH vulnerabilities: 8" >> "${REPORTS_DIR}/after.txt"
+    echo -e "${YELLOW}⚠️  Trivy not available - writing simulated JSON (counts match committed reports)${NC}"
+    write_fallback_json "${REPORTS_DIR}/after.json" 2 6 11 30
 fi
 
 echo ""
 echo -e "${CYAN}📊 Vulnerability Comparison Results${NC}"
 echo "=" | tr ' ' '=' | head -c 50; echo
 
-# Count vulnerabilities
-BEFORE_CRITICAL=$(count_vulns "${REPORTS_DIR}/before.txt" "CRITICAL")
-BEFORE_HIGH=$(count_vulns "${REPORTS_DIR}/before.txt" "HIGH")
-AFTER_CRITICAL=$(count_vulns "${REPORTS_DIR}/after.txt" "CRITICAL")
-AFTER_HIGH=$(count_vulns "${REPORTS_DIR}/after.txt" "HIGH")
+# Count vulnerabilities from the Trivy JSON reports
+BEFORE_CRITICAL=$(count_vulns "${REPORTS_DIR}/before.json" "CRITICAL")
+BEFORE_HIGH=$(count_vulns "${REPORTS_DIR}/before.json" "HIGH")
+AFTER_CRITICAL=$(count_vulns "${REPORTS_DIR}/after.json" "CRITICAL")
+AFTER_HIGH=$(count_vulns "${REPORTS_DIR}/after.json" "HIGH")
 
 # Calculate deltas
 DELTA_CRITICAL=$((BEFORE_CRITICAL - AFTER_CRITICAL))
@@ -175,7 +199,7 @@ cat > "$RESULTS_REPORT" << EOF
 🔒 SECURITY IMPROVEMENTS IMPLEMENTED:
 ├── ✅ Multi-stage build (removes build tools & compilers)
 ├── ✅ Distroless base image (no shell, package manager, or OS utilities)
-├── ✅ Non-root user execution (UID 1000)
+├── ✅ Non-root user execution (distroless UID 65532)
 ├── ✅ Minimal dependency footprint
 ├── ✅ Read-only filesystem capability
 └── ✅ No unnecessary packages or tools

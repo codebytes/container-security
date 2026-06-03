@@ -1,0 +1,191 @@
+# Falco -> OTLP adapter
+#
+# Falcosidekick posts its own JSON payload to a generic webhook; the OTEL
+# collector's OTLP HTTP receiver only accepts OTLP-formatted requests on
+# /v1/logs. This tiny adapter bridges the gap: it accepts the Falcosidekick
+# webhook on :8080/webhook/falco, translates each alert into an OTLP/HTTP log
+# record, and forwards it to the collector's logs pipeline. It uses only the
+# Python standard library so no custom image build is required.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: falco-otlp-adapter
+  namespace: demo-mantis
+  labels:
+    app: falco-otlp-adapter
+    guardian.dev/demo: observability
+data:
+  adapter.py: |
+    import json
+    import os
+    import time
+    import urllib.request
+    from datetime import datetime, timezone
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    OTLP_LOGS_ENDPOINT = os.getenv(
+        "OTLP_LOGS_ENDPOINT",
+        "http://otel-collector.demo-mantis.svc.cluster.local:4318/v1/logs",
+    )
+
+    # Falco priority -> OTLP severity number (see OTLP logs data model).
+    SEVERITY = {
+        "emergency": 21, "alert": 19, "critical": 17, "error": 17,
+        "warning": 13, "notice": 10, "informational": 9, "info": 9, "debug": 5,
+    }
+
+    def to_nanos(ts):
+        if ts:
+            try:
+                cleaned = ts.replace("Z", "+00:00")
+                return int(datetime.fromisoformat(cleaned).timestamp() * 1e9)
+            except ValueError:
+                pass
+        return int(time.time() * 1e9)
+
+    def build_otlp(alert):
+        priority = str(alert.get("priority", "Notice"))
+        nanos = to_nanos(alert.get("time"))
+        attributes = [
+            {"key": "falco.rule", "value": {"stringValue": str(alert.get("rule", "unknown"))}},
+            {"key": "falco.priority", "value": {"stringValue": priority}},
+            {"key": "falco.source", "value": {"stringValue": str(alert.get("source", "syscall"))}},
+        ]
+        for k, v in (alert.get("output_fields") or {}).items():
+            attributes.append({"key": "falco." + str(k), "value": {"stringValue": str(v)}})
+        return {
+            "resourceLogs": [{
+                "resource": {"attributes": [
+                    {"key": "service.name", "value": {"stringValue": "falco"}},
+                    {"key": "guardian.demo", "value": {"stringValue": "observability"}},
+                ]},
+                "scopeLogs": [{
+                    "scope": {"name": "falco-otlp-adapter"},
+                    "logRecords": [{
+                        "timeUnixNano": str(nanos),
+                        "observedTimeUnixNano": str(int(time.time() * 1e9)),
+                        "severityText": priority,
+                        "severityNumber": SEVERITY.get(priority.lower(), 9),
+                        "body": {"stringValue": str(alert.get("output", json.dumps(alert)))},
+                        "attributes": attributes,
+                    }],
+                }],
+            }]
+        }
+
+    def forward(payload):
+        data = json.dumps(build_otlp(payload)).encode("utf-8")
+        req = urllib.request.Request(
+            OTLP_LOGS_ENDPOINT, data=data,
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return resp.status
+
+    class Handler(BaseHTTPRequestHandler):
+        def _send(self, code, msg="ok"):
+            self.send_response(code)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(msg.encode("utf-8"))
+
+        def do_GET(self):
+            if self.path in ("/healthz", "/health"):
+                self._send(200, "healthy")
+            else:
+                self._send(404, "not found")
+
+        def do_POST(self):
+            if self.path.rstrip("/") != "/webhook/falco":
+                self._send(404, "not found")
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                alert = json.loads(raw or b"{}")
+                status = forward(alert)
+                print("forwarded falco alert rule=%s otlp_status=%s" % (
+                    alert.get("rule"), status), flush=True)
+                self._send(202, "accepted")
+            except Exception as exc:  # noqa: BLE001
+                print("failed to forward falco alert: %s" % exc, flush=True)
+                self._send(502, "forward failed")
+
+        def log_message(self, *args):
+            return
+
+    if __name__ == "__main__":
+        print("falco-otlp-adapter listening on :8080 -> %s" % OTLP_LOGS_ENDPOINT, flush=True)
+        ThreadingHTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: falco-otlp-adapter
+  namespace: demo-mantis
+  labels:
+    app: falco-otlp-adapter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: falco-otlp-adapter
+  template:
+    metadata:
+      labels:
+        app: falco-otlp-adapter
+    spec:
+      containers:
+        - name: adapter
+          image: python:3.11-slim
+          command: ["python", "/app/adapter.py"]
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: OTLP_LOGS_ENDPOINT
+              value: http://otel-collector.demo-mantis.svc.cluster.local:4318/v1/logs
+          volumeMounts:
+            - name: adapter
+              mountPath: /app
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+      volumes:
+        - name: adapter
+          configMap:
+            name: falco-otlp-adapter
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: falco-otlp-adapter
+  namespace: demo-mantis
+  labels:
+    app: falco-otlp-adapter
+spec:
+  selector:
+    app: falco-otlp-adapter
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

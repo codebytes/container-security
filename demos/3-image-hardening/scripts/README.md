@@ -108,9 +108,13 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ## Output Location
 
 All results are saved to:
-- `reports/before.txt` - Baseline image scan results
-- `reports/after.txt` - Hardened image scan results
+- `reports/before.json` / `reports/after.json` - Machine-readable Trivy output used for vulnerability counting (jq / ConvertFrom-Json)
+- `reports/before.txt` - Baseline image scan results (human-readable table)
+- `reports/after.txt` - Hardened image scan results (human-readable table)
 - `reports/demo-results.txt` - Comprehensive demo report
+
+> Counts come from the JSON reports, not the tables. Grepping the table output
+> counts legend/header lines, not real findings.
 
 ---
 

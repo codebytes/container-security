@@ -58,7 +58,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 **The Numbers:**
 - 78% of orgs fail audits due to unresolved container CVEs
 - 63% of organizations hit by supply chain attacks (2024-2025)
-- 267 days average dwell time without runtime detection
+- ~10-day global median attacker dwell time (Mandiant M-Trends 2024) — still days of undetected access without runtime detection
 
 ---
 
@@ -99,7 +99,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 **Shield Right** = Detect & contain what gets through (runtime)
 - Behavioral detection, network policies, observability
-- Why: 267 days average dwell time without runtime detection
+- Why: even a ~10-day global median dwell time (Mandiant M-Trends 2024) means attackers operate undetected for days
 
 **Both required.** Prevention alone is not enough.
 
@@ -114,8 +114,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 **Standard:** NIST SP 800-207 &nbsp;|&nbsp; **Framework:** SLSA (OpenSSF)
 
 **Our tools:** CNCF-first — portable, community-driven, production-proven
-- **Graduated:** Falco, OPA, Cilium, Prometheus, Kyverno, OpenTelemetry
-- **Incubating:** Trivy, Sigstore
+- **Graduated:** Falco, OPA, Cilium, Prometheus, Kyverno
+- **Incubating:** Trivy, Sigstore, OpenTelemetry
 
 ---
 
@@ -125,6 +125,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ### Policy Orchestration
 
 ![bg right](./img/policy.png)
+
+<!-- We start at the gate. Before anything runs, Star-Lord decides what the cluster will even admit. -->
 
 ---
 
@@ -228,9 +230,10 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 - Tools: Trivy, Grype, Snyk
 
 **Cryptographic Signing:**
-- Keyless with OIDC (no key management!)
+- Keyless with OIDC is the production goal (no key management!)
 - Sigstore: Cosign + Rekor + Fulcio
 - **Verify:** Only signed images deploy
+- *(Demo #2 uses a keyed example — committed `cosign.pub` — for offline, reproducible runs)*
 
 ---
 
@@ -261,6 +264,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 5. Deploy with policy → Only signed allowed
 
 **Key Takeaway:** Cryptographic trust from build to deploy
+
+<!-- Gamora proves what we ship is trustworthy. Next: Rocket shrinks what we ship so there is less to attack. -->
 
 ---
 
@@ -295,7 +300,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 **Numbers:**
 - Ubuntu base: ~80MB, 100+ packages
 - Distroless: ~2-20MB, <10 packages
-- **Result:** 60-80% fewer CVEs
+- **Result (this demo):** ~99% fewer CVEs (Debian 11 `bullseye` → Debian 12 distroless — note the base-image bump)
 
 **Modern Options:**
 - **Google Distroless** (Debian-based, Bazel builds)
@@ -319,7 +324,7 @@ FROM gcr.io/distroless/python3-debian12
 COPY --from=build /usr/local/lib/python3.11/site-packages \
      /usr/local/lib/python3.11/site-packages
 COPY --from=build /app /app
-USER nonroot:nonroot
+USER 65532
 ENTRYPOINT ["python", "/app/main.py"]
 ```
 
@@ -334,7 +339,7 @@ ENTRYPOINT ["python", "/app/main.py"]
 
 1. Scan "before" (python:3.11-bullseye) → Count CVEs
 2. Scan "after" (distroless python3-debian12) → Count CVEs
-3. Compare: **60-80% reduction**
+3. Compare: **~99% CVE reduction** (base image bumped Debian 11 → 12)
 4. Compare sizes: **50%+ smaller**
 5. Show: No shell in distroless container
 
@@ -363,7 +368,7 @@ ENTRYPOINT ["python", "/app/main.py"]
 - **Insider threats** → Authorized malicious actions
 - **Configuration drift** → Runtime container changes
 
-**Remember that 267-day dwell time?** Runtime detection is how you shrink it.
+**Remember that ~10-day median dwell time?** Runtime detection is how you shrink it further.
 
 **You need eyes on running containers**
 
@@ -510,7 +515,7 @@ Use Tetragon when you need real-time kernel-level blocking
 - **9:00 AM:** API latency spike (APM)
 - **9:02 AM:** High CPU usage (Prometheus)
 - **9:02 AM:** Suspicious process (Falco alert)
-- **Context:** Same pod, same trace ID
+- **Context:** Same pod, namespace, and timestamp window
 - **Result:** Detected in minutes, not days
 
 ---

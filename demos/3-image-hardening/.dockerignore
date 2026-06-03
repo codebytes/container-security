@@ -1,0 +1,28 @@
+# Keep the build context minimal: only app/ + requirements are needed by the
+# Dockerfiles. Everything below is excluded to shrink context, speed up builds,
+# and avoid leaking docs/scan output/VCS metadata into image layers.
+
+# Version control
+.git
+**/.git
+.gitignore
+
+# Docker / demo tooling (referenced via -f, never COPYed)
+.dockerignore
+dockerfiles/
+scripts/
+
+# Scan reports and generated results
+reports/
+
+# Documentation
+**/*.md
+
+# Python caches and local environments
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.venv/
+**/venv/
+**/.env

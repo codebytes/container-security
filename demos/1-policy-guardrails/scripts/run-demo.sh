@@ -112,10 +112,10 @@ echo "✅ Clean environment prepared"
 
 echo -e "${CYAN}[2/9] Checking local images${NC}"
 # Check if required images exist locally
-SECURE_IMAGE_EXISTS=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -c "guardian-demo:secure" 2>/dev/null || echo "0")
-INSECURE_IMAGE_EXISTS=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -c "guardian-demo:insecure" 2>/dev/null || echo "0")
+SECURE_IMAGE_EXISTS=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -c "guardian-demo:secure" || true)
+INSECURE_IMAGE_EXISTS=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -c "guardian-demo:insecure" || true)
 
-if [ "$SECURE_IMAGE_EXISTS" -eq "0" ] || [ "$INSECURE_IMAGE_EXISTS" -eq "0" ]; then
+if [ "${SECURE_IMAGE_EXISTS:-0}" -eq 0 ] || [ "${INSECURE_IMAGE_EXISTS:-0}" -eq 0 ]; then
     echo "⚠️  Required images not found locally. Building images..."
     echo "Building guardian-demo:secure and guardian-demo:insecure..."
     
@@ -127,10 +127,10 @@ if [ "$SECURE_IMAGE_EXISTS" -eq "0" ] || [ "$INSECURE_IMAGE_EXISTS" -eq "0" ]; t
     fi
     
     # Verify images were built
-    SECURE_IMAGE_EXISTS=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -c "guardian-demo:secure" 2>/dev/null || echo "0")
-    INSECURE_IMAGE_EXISTS=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -c "guardian-demo:insecure" 2>/dev/null || echo "0")
+    SECURE_IMAGE_EXISTS=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -c "guardian-demo:secure" || true)
+    INSECURE_IMAGE_EXISTS=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep -c "guardian-demo:insecure" || true)
     
-    if [ "$SECURE_IMAGE_EXISTS" -eq "0" ] || [ "$INSECURE_IMAGE_EXISTS" -eq "0" ]; then
+    if [ "${SECURE_IMAGE_EXISTS:-0}" -eq 0 ] || [ "${INSECURE_IMAGE_EXISTS:-0}" -eq 0 ]; then
         echo -e "${RED}❌ Failed to build required images${NC}"
         exit 1
     fi
@@ -138,6 +138,20 @@ if [ "$SECURE_IMAGE_EXISTS" -eq "0" ] || [ "$INSECURE_IMAGE_EXISTS" -eq "0" ]; t
     echo "✅ Images built successfully"
 else
     echo "✅ Required images found locally"
+fi
+
+# Make the locally-built images reachable by the kind cluster node.
+# Demo 1 uses UNsigned local images (no cosign signatures), so `kind load` is
+# the simplest, correct delivery path — unlike demo 2, which must stay
+# registry-centric to preserve its signed-image admission flow.
+KIND_CLUSTER="${KIND_CLUSTER:-container-security}"
+if command -v kind &>/dev/null && kind get clusters 2>/dev/null | grep -qx "$KIND_CLUSTER"; then
+    echo "📦 Loading images into kind cluster '$KIND_CLUSTER' so the node can pull them..."
+    kind load docker-image "guardian-demo:secure" "guardian-demo:insecure" --name "$KIND_CLUSTER"
+    echo "✅ Images loaded into the kind node"
+else
+    echo "ℹ️  kind cluster '$KIND_CLUSTER' not detected; assuming the cluster node can already"
+    echo "   access these images (e.g. Docker Desktop's built-in Kubernetes shares the engine)."
 fi
 
 echo -e "${CYAN}[3/9] Checking Kyverno installation${NC}"
@@ -181,7 +195,7 @@ else
     exit 1
 fi
 
-echo -e "${CYAN}[9/9] Deploying insecure pods WITHOUT policies${NC}"
+echo -e "${CYAN}[4/9] Deploying insecure pods WITHOUT policies${NC}"
 echo "First, let's create some insecure pods to show the security risks..."
 
 echo "🔓 Creating unsigned pod..."
@@ -197,7 +211,7 @@ echo ""
 echo "Waiting for pods to be in a stable state..."
 sleep 10
 
-echo -e "${CYAN}[9/9] Examining the security state WITHOUT policies${NC}"
+echo -e "${CYAN}Examining the security state WITHOUT policies${NC}"
 echo "Let's look at what we have running:"
 kubectl get pods -n demo-star-lord -o wide
 
@@ -233,7 +247,7 @@ else
     exit 1
 fi
 
-echo -e "${CYAN}[9/9] Applying Kyverno security policies${NC}"
+echo -e "${CYAN}[5/9] Applying Kyverno security policies${NC}"
 echo "Installing admission control policies for:"
 echo "  • Non-root container enforcement"
 echo "  • Signed image requirements (simulated)"
@@ -255,7 +269,7 @@ echo ""
 echo -e "${RED}================== TESTING POLICY ENFORCEMENT ==================${NC}"
 echo -e "${RED}Now let's see what happens when we try to create insecure pods...${NC}"
 
-echo -e "${CYAN}[9/9] Testing root pod rejection${NC}"
+echo -e "${CYAN}[6/9] Testing root pod rejection${NC}"
 echo "Attempting to deploy a new root pod (should be BLOCKED)..."
 
 set +e  # Don't exit on error for this test
@@ -273,7 +287,7 @@ fi
 
 wait_for_user
 
-echo -e "${CYAN}[9/9] Testing unsigned image rejection${NC}"
+echo -e "${CYAN}[7/9] Testing unsigned image rejection${NC}"
 echo "Attempting to deploy a new unsigned pod (should be BLOCKED)..."
 
 set +e  # Don't exit on error for this test  
@@ -291,7 +305,7 @@ fi
 
 wait_for_user
 
-echo -e "${CYAN}[9/9] Testing compliant pod (should still work)${NC}"
+echo -e "${CYAN}[8/9] Testing compliant pod (should still work)${NC}"
 echo "Attempting to deploy a compliant, secure pod..."
 
 # Delete existing compliant pod first
@@ -300,10 +314,18 @@ kubectl delete pod nonroot-pod -n demo-star-lord --ignore-not-found
 # Try to create a new compliant pod
 kubectl apply -f "$MANIFESTS_PATH/nonroot-pod.yaml"
 echo "Waiting for compliant pod to be ready..."
-kubectl wait --for=condition=Ready pod/nonroot-pod -n demo-star-lord --timeout=60s || true
-kubectl get pod nonroot-pod -n demo-star-lord
-
-echo -e "${GREEN}✅ SUCCESS: Compliant pod was accepted and is running${NC}"
+if kubectl wait --for=condition=Ready pod/nonroot-pod -n demo-star-lord --timeout=90s; then
+    kubectl get pod nonroot-pod -n demo-star-lord
+    echo -e "${GREEN}✅ SUCCESS: Compliant pod was accepted and is running${NC}"
+else
+    echo -e "${RED}❌ FAILURE: Compliant pod was admitted but did NOT reach Ready state${NC}"
+    kubectl get pod nonroot-pod -n demo-star-lord -o wide
+    echo -e "${YELLOW}Pod events / status (for troubleshooting):${NC}"
+    kubectl describe pod nonroot-pod -n demo-star-lord | grep -A20 "Events:" || true
+    echo -e "${YELLOW}Common cause: the guardian-demo:secure image is not reachable by the cluster node.${NC}"
+    echo -e "${YELLOW}On kind, ensure 'kind load docker-image guardian-demo:secure --name ${KIND_CLUSTER:-container-security}' ran.${NC}"
+    exit 1
+fi
 
 wait_for_user
 
@@ -343,6 +365,3 @@ echo ""
 echo -e "${YELLOW}🧹 Cleanup (optional):${NC}"
 echo "kubectl delete namespace demo-star-lord --ignore-not-found"
 echo "kubectl delete clusterpolicy require-nonroot-demo --ignore-not-found"
-
-# Cleanup temp files
-rm -f /tmp/unsigned-result.txt /tmp/root-result.txt

@@ -1,0 +1,46 @@
+# UNSIGNED image -> EXPECTED REJECTED by the verify-supply-chain-signatures
+# policy (no cosign signature found for this image -> admission denied).
+#
+# IMPORTANT: cosign signatures attach to the image DIGEST, not the tag, so simply
+# RE-TAGGING the signed image would still be signed. Build a genuinely DISTINCT
+# image (different digest) and do NOT sign it, e.g. from the demo root:
+#   docker build -f pipeline/Dockerfile --label demo.variant=unsigned \
+#     -t localhost:5000/guardian-demo-app:v0.1.0-unsigned .
+#   docker push localhost:5000/guardian-demo-app:v0.1.0-unsigned
+# (Do NOT run `cosign sign` on this image.)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardian-unsigned
+  namespace: demo-gamora
+  labels:
+    app: guardian-unsigned
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guardian-unsigned
+  template:
+    metadata:
+      labels:
+        app: guardian-unsigned
+        guardian.dev/last-scan: "high-critical-clear"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          image: registry:5000/guardian-demo-app:v0.1.0-unsigned
+          ports:
+            - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

@@ -32,10 +32,14 @@ spec:
           ports:
             - containerPort: 80
           securityContext:
-            runAsNonRoot: true
+            # Stock nginx image runs its master as root and binds privileged
+            # port 80, so it must run as root for this demo. Be explicit rather
+            # than leaving a contradictory runAsNonRoot:true with no UID.
+            runAsNonRoot: false
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+              add: ["NET_BIND_SERVICE"]
           resources:
             requests:
               cpu: 50m
@@ -77,16 +81,21 @@ spec:
     spec:
       containers:
         - name: api
-          image: kennethreitz/httpbin
+          image: ghcr.io/mccutchen/go-httpbin:v2.15.0
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           env:
             - name: DB_HOST
               value: db
             - name: DB_PORT
               value: "5432"
           securityContext:
+            # go-httpbin is built on gcr.io/distroless/base (default user root).
+            # The binary needs no root and listens on unprivileged 8080, so pin
+            # the distroless nonroot UID 65532 to satisfy runAsNonRoot.
             runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -110,7 +119,7 @@ spec:
     app: api
   ports:
     - port: 8080
-      targetPort: 80
+      targetPort: 8080
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -129,6 +138,10 @@ spec:
       labels:
         app: db
     spec:
+      securityContext:
+        # fsGroup is a pod-level field; it makes Kubernetes group-own the
+        # emptyDir volume as gid 70 so the postgres user can write to PGDATA.
+        fsGroup: 70
       containers:
         - name: db
           image: postgres:16-alpine
@@ -138,10 +151,23 @@ spec:
                 secretKeyRef:
                   name: db-credentials
                   key: POSTGRES_PASSWORD
+            # PGDATA points at a subdir of the emptyDir mount so initdb creates
+            # and owns a clean directory (mode 700) instead of fighting the
+            # mount point's perms.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           ports:
             - containerPort: 5432
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
           securityContext:
-            runAsUser: 999
+            # postgres:16-alpine's postgres user is uid/gid 70 (NOT 999, which
+            # is the Debian variant). fsGroup 70 makes Kubernetes group-own the
+            # emptyDir so initdb can write without CAP_CHOWN/CAP_FOWNER.
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
@@ -152,6 +178,9 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+      volumes:
+        - name: pgdata
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

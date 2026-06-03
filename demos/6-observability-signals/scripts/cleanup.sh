@@ -31,7 +31,7 @@ fi
 echo "✅ Falcosidekick removed"
 
 echo -e "${CYAN}[3/3] Removing demo image (optional)${NC}"
-docker rmi ghcr.io/codebytes/guardian-telemetry:0.1.0 2>/dev/null || echo "Image not found locally (skipping)"
+docker rmi guardian-telemetry:local 2>/dev/null || echo "Image not found locally (skipping)"
 echo "✅ Cleanup completed"
 
 echo ""

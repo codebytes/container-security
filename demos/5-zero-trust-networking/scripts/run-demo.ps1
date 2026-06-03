@@ -21,13 +21,13 @@ kubectl apply -f ../manifests/tester-pod.yaml | Out-Null
 kubectl wait --for=condition=Ready pod/tester -n demo-groot --timeout=60s
 
 Write-Host "[6/8] Testing blocked traffic" -ForegroundColor Cyan
-kubectl exec -n demo-groot tester -- curl -sS api:8080/health || Write-Host "Expected failure: tester blocked from api" -ForegroundColor Yellow
+kubectl exec -n demo-groot tester -- curl -sS api:8080/get || Write-Host "Expected failure: tester blocked from api" -ForegroundColor Yellow
 kubectl exec -n demo-groot tester -- curl -sS db:5432 || Write-Host "Expected failure: tester blocked from db" -ForegroundColor Yellow
 
 Write-Host "[7/8] Temporarily allowing tester to api" -ForegroundColor Cyan
 kubectl apply -f ../manifests/allow-tester-api.yaml | Out-Null
 Start-Sleep -Seconds 3
-kubectl exec -n demo-groot tester -- curl -sS api:8080/health
+kubectl exec -n demo-groot tester -- curl -sS api:8080/get
 
 Write-Host "[8/8] Cleanup" -ForegroundColor Cyan
 kubectl delete -f ../manifests/allow-tester-api.yaml --ignore-not-found | Out-Null

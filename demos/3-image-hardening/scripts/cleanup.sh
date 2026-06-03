@@ -16,8 +16,8 @@ echo "Removing demo images and reports"
 echo ""
 
 echo -e "${CYAN}[1/2] Removing demo images${NC}"
-docker rmi guardian-demo:baseline 2>/dev/null || true
-docker rmi guardian-demo:hardened 2>/dev/null || true
+docker rmi guardian-demo:before 2>/dev/null || true
+docker rmi guardian-demo:after 2>/dev/null || true
 echo "✅ Demo images removed"
 
 echo -e "${CYAN}[2/2] Removing vulnerability reports${NC}"
@@ -28,6 +28,6 @@ echo ""
 echo -e "${GREEN}✅ Cleanup completed successfully!${NC}"
 echo ""
 echo "Removed resources:"
-echo "• guardian-demo:baseline image"
-echo "• guardian-demo:hardened image"
+echo "• guardian-demo:before image"
+echo "• guardian-demo:after image"
 echo "• Vulnerability scan reports"

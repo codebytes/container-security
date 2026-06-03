@@ -24,7 +24,9 @@ if (-not (Test-Path $ReportsDir)) {
     New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null
 }
 
-# Function to count vulnerabilities
+# Function to count vulnerabilities of a given severity from a Trivy JSON report.
+# Counts real findings across ALL targets instead of grepping the table output
+# (table grep counts legend/header lines, not vulnerabilities).
 function Get-VulnCount {
     param(
         [string]$ReportFile,
@@ -36,13 +38,37 @@ function Get-VulnCount {
     }
 
     try {
-        $content = Get-Content $ReportFile -ErrorAction SilentlyContinue
-        $count = ($content | Select-String $Severity).Count
-        return $count
+        $report = Get-Content $ReportFile -Raw -ErrorAction Stop | ConvertFrom-Json
+        $count = 0
+        foreach ($result in $report.Results) {
+            if ($null -ne $result.Vulnerabilities) {
+                $count += ($result.Vulnerabilities | Where-Object { $_.Severity -eq $Severity }).Count
+            }
+        }
+        return [int]$count
     }
     catch {
         return 0
     }
+}
+
+# Writes a minimal Trivy-shaped JSON report so counting still works when
+# Trivy/Docker are unavailable. Counts mirror the committed real reports.
+function Write-FallbackJson {
+    param(
+        [string]$File,
+        [int]$Critical,
+        [int]$High,
+        [int]$Medium,
+        [int]$Low
+    )
+    $vulns = @()
+    for ($i = 0; $i -lt $Critical; $i++) { $vulns += @{ Severity = "CRITICAL" } }
+    for ($i = 0; $i -lt $High; $i++)     { $vulns += @{ Severity = "HIGH" } }
+    for ($i = 0; $i -lt $Medium; $i++)   { $vulns += @{ Severity = "MEDIUM" } }
+    for ($i = 0; $i -lt $Low; $i++)      { $vulns += @{ Severity = "LOW" } }
+    $doc = @{ Results = @(@{ Target = "fallback (simulated)"; Vulnerabilities = $vulns }) }
+    $doc | ConvertTo-Json -Depth 6 | Out-File -FilePath $File -Encoding UTF8
 }
 
 # Function to get image size
@@ -91,16 +117,16 @@ Invoke-DockerCommand -Command $dockerCmd -SuccessMessage "Baseline image built s
 Write-Host ""
 Write-Host "Step 2: Scanning baseline image with Trivy..." -ForegroundColor Yellow
 $beforeReport = Join-Path $ReportsDir "before.txt"
-$trivyCmd = "trivy image --format table --output `"$beforeReport`" $ImageBefore"
+$beforeJson = Join-Path $ReportsDir "before.json"
 
 # Try Trivy scan, but continue if not available
 try {
-    Invoke-Expression $trivyCmd
+    Invoke-Expression "trivy image --format json --output `"$beforeJson`" $ImageBefore"
+    Invoke-Expression "trivy image --format table --output `"$beforeReport`" $ImageBefore"
     Write-Host "✅ Baseline scan completed" -ForegroundColor Green
 } catch {
-    Write-Host "⚠️  Trivy not available - creating simulated report" -ForegroundColor Yellow
-    "CRITICAL vulnerabilities: 45" | Out-File -FilePath $beforeReport -Encoding UTF8
-    "HIGH vulnerabilities: 78" | Add-Content -Path $beforeReport -Encoding UTF8
+    Write-Host "⚠️  Trivy not available - writing simulated JSON (counts match committed reports)" -ForegroundColor Yellow
+    Write-FallbackJson -File $beforeJson -Critical 41 -High 468 -Medium 1319 -Low 1609
 }
 
 Write-Host ""
@@ -111,27 +137,27 @@ Invoke-DockerCommand -Command $dockerCmd -SuccessMessage "Hardened image built s
 Write-Host ""
 Write-Host "Step 4: Scanning hardened image with Trivy..." -ForegroundColor Yellow
 $afterReport = Join-Path $ReportsDir "after.txt"
-$trivyCmd = "trivy image --format table --output `"$afterReport`" $ImageAfter"
+$afterJson = Join-Path $ReportsDir "after.json"
 
 # Try Trivy scan, but continue if not available
 try {
-    Invoke-Expression $trivyCmd
+    Invoke-Expression "trivy image --format json --output `"$afterJson`" $ImageAfter"
+    Invoke-Expression "trivy image --format table --output `"$afterReport`" $ImageAfter"
     Write-Host "✅ Hardened scan completed" -ForegroundColor Green
 } catch {
-    Write-Host "⚠️  Trivy not available - creating simulated report" -ForegroundColor Yellow
-    "CRITICAL vulnerabilities: 2" | Out-File -FilePath $afterReport -Encoding UTF8
-    "HIGH vulnerabilities: 8" | Add-Content -Path $afterReport -Encoding UTF8
+    Write-Host "⚠️  Trivy not available - writing simulated JSON (counts match committed reports)" -ForegroundColor Yellow
+    Write-FallbackJson -File $afterJson -Critical 2 -High 6 -Medium 11 -Low 30
 }
 
 Write-Host ""
 Write-Host "📊 Vulnerability Comparison Results" -ForegroundColor Cyan
 Write-Host ("=" * 50)
 
-# Count vulnerabilities
-$beforeCritical = Get-VulnCount -ReportFile $beforeReport -Severity "CRITICAL"
-$beforeHigh = Get-VulnCount -ReportFile $beforeReport -Severity "HIGH"
-$afterCritical = Get-VulnCount -ReportFile $afterReport -Severity "CRITICAL"
-$afterHigh = Get-VulnCount -ReportFile $afterReport -Severity "HIGH"
+# Count vulnerabilities from the Trivy JSON reports
+$beforeCritical = Get-VulnCount -ReportFile $beforeJson -Severity "CRITICAL"
+$beforeHigh = Get-VulnCount -ReportFile $beforeJson -Severity "HIGH"
+$afterCritical = Get-VulnCount -ReportFile $afterJson -Severity "CRITICAL"
+$afterHigh = Get-VulnCount -ReportFile $afterJson -Severity "HIGH"
 
 # Calculate deltas
 $deltaCritical = $beforeCritical - $afterCritical
@@ -217,7 +243,7 @@ $report = @"
 🔒 SECURITY IMPROVEMENTS IMPLEMENTED:
 ├── ✅ Multi-stage build (removes build tools & compilers)
 ├── ✅ Distroless base image (no shell, package manager, or OS utilities)
-├── ✅ Non-root user execution (UID 1000)
+├── ✅ Non-root user execution (distroless UID 65532)
 ├── ✅ Minimal dependency footprint
 ├── ✅ Read-only filesystem capability
 └── ✅ No unnecessary packages or tools

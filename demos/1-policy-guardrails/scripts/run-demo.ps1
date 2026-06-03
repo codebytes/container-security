@@ -157,6 +157,21 @@ if ($SecureImageExists -eq 0 -or $InsecureImageExists -eq 0) {
     Write-Host "✅ Required images found locally" -ForegroundColor Green
 }
 
+# Make the locally-built images reachable by the kind cluster node.
+# Demo 1 uses UNsigned local images (no cosign signatures), so `kind load` is the
+# simplest, correct delivery path — unlike demo 2, which stays registry-centric
+# to preserve its signed-image admission flow.
+$KindCluster = if ($env:KIND_CLUSTER) { $env:KIND_CLUSTER } else { "container-security" }
+$kindAvailable = Get-Command kind -ErrorAction SilentlyContinue
+if ($kindAvailable -and ((kind get clusters 2>$null) -contains $KindCluster)) {
+    Write-Host "📦 Loading images into kind cluster '$KindCluster' so the node can pull them..."
+    kind load docker-image "guardian-demo:secure" "guardian-demo:insecure" --name $KindCluster
+    Write-Host "✅ Images loaded into the kind node" -ForegroundColor Green
+} else {
+    Write-Host "ℹ️  kind cluster '$KindCluster' not detected; assuming the cluster node can already"
+    Write-Host "   access these images (e.g. Docker Desktop's built-in Kubernetes shares the engine)."
+}
+
 Write-Host "[9/9] Checking Kyverno installation" -ForegroundColor Cyan
 $kyvernoExists = kubectl get crd clusterpolicies.kyverno.io 2>$null
 if (-not $kyvernoExists) {
@@ -325,10 +340,19 @@ kubectl delete pod nonroot-pod -n demo-star-lord --ignore-not-found
 # Try to create a new compliant pod
 kubectl apply -f "$ManifestsPath/nonroot-pod.yaml"
 Write-Host "Waiting for compliant pod to be ready..."
-kubectl wait --for=condition=Ready pod/nonroot-pod -n demo-star-lord --timeout=60s
-kubectl get pod nonroot-pod -n demo-star-lord
-
-Write-Host "✅ SUCCESS: Compliant pod was accepted and is running" -ForegroundColor Green
+kubectl wait --for=condition=Ready pod/nonroot-pod -n demo-star-lord --timeout=90s
+if ($LASTEXITCODE -eq 0) {
+    kubectl get pod nonroot-pod -n demo-star-lord
+    Write-Host "✅ SUCCESS: Compliant pod was accepted and is running" -ForegroundColor Green
+} else {
+    Write-Host "❌ FAILURE: Compliant pod was admitted but did NOT reach Ready state" -ForegroundColor Red
+    kubectl get pod nonroot-pod -n demo-star-lord -o wide
+    Write-Host "Pod events / status (for troubleshooting):" -ForegroundColor Yellow
+    kubectl describe pod nonroot-pod -n demo-star-lord | Select-String -Pattern "Events:" -A 20
+    Write-Host "Common cause: the guardian-demo:secure image is not reachable by the cluster node." -ForegroundColor Yellow
+    Write-Host "On kind, ensure 'kind load docker-image guardian-demo:secure --name $KindCluster' ran." -ForegroundColor Yellow
+    exit 1
+}
 
 Wait-ForUser
 

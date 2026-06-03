@@ -4,13 +4,14 @@ metadata:
   name: telemetry-load
   namespace: demo-mantis
 spec:
-  backoffLimit: 0
+  backoffLimit: 3
+  activeDeadlineSeconds: 240
   template:
     metadata:
       labels:
         job: telemetry-load
     spec:
-      restartPolicy: Never
+      restartPolicy: OnFailure
       containers:
         - name: curl
           image: curlimages/curl:8.8.0
@@ -18,8 +19,24 @@ spec:
             - /bin/sh
             - -c
             - |
-              for i in $(seq 1 5); do
-                curl -sS guardian-telemetry:8080/hello;
-                sleep 1;
-              done;
-              curl -sS guardian-telemetry:8080/simulate-anomaly;
+              set -eu
+              # Same-namespace short name resolves regardless of which
+              # namespace the job runs in; Service listens on 8080.
+              TARGET="http://guardian-telemetry:8080"
+              echo "Waiting for ${TARGET}/health to become ready..."
+              i=0
+              until curl -sSf --max-time 3 "${TARGET}/health" >/dev/null 2>&1; do
+                i=$((i+1))
+                if [ "$i" -ge 60 ]; then
+                  echo "Service never became ready after ${i} attempts" >&2
+                  exit 1
+                fi
+                sleep 2
+              done
+              echo "Service ready - generating traffic"
+              for n in $(seq 1 10); do
+                curl -sSf --retry 5 --retry-connrefused --max-time 5 "${TARGET}/hello" && echo
+                sleep 1
+              done
+              curl -sSf --retry 5 --retry-connrefused --max-time 5 "${TARGET}/simulate-anomaly" && echo
+              echo "Load generation complete"

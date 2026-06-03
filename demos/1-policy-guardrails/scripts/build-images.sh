@@ -160,6 +160,20 @@ echo -e "${CYAN}[4/4] Verification${NC}"
 echo "Listing built images:"
 docker images | grep "$IMAGE_NAME" || echo "No local images found (may have been pushed only)"
 
+# When building local images (not pushing to a registry), make them reachable by
+# the shared kind cluster node. Demo 1 uses UNsigned local images, so `kind load`
+# is the simplest correct delivery path (demo 2 stays registry-centric for signing).
+if [ "$PUSH_TO_REGISTRY" != "true" ]; then
+    KIND_CLUSTER="${KIND_CLUSTER:-container-security}"
+    if command -v kind &>/dev/null && kind get clusters 2>/dev/null | grep -qx "$KIND_CLUSTER"; then
+        echo -e "${CYAN}Loading images into kind cluster '$KIND_CLUSTER'...${NC}"
+        kind load docker-image "$SECURE_TAG" "$INSECURE_TAG" --name "$KIND_CLUSTER"
+        echo -e "${GREEN}✅ Images loaded into the kind node${NC}"
+    else
+        echo -e "${YELLOW}ℹ️  kind cluster '$KIND_CLUSTER' not detected; skipping kind load.${NC}"
+    fi
+fi
+
 echo ""
 echo -e "${GREEN}✅ Image build completed successfully!${NC}"
 echo ""
