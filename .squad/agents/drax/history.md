@@ -17,3 +17,4 @@ Drax — Runtime Detection. Runtime threat detection — Falco rules, behavioral
 Initial setup complete.
 - 2026-05-30: Completed review of assigned slides/demo layer for the full slides-demos-team-structure review.
 - 2026-05-30: Cross-platform/architecture batch merged: reinforce shared kind+Calico setup-once/teardown-when-finished lifecycle, working .sh/.ps1 script twins, and macOS arm64/amd64 + Windows amd64/arm64 portability.
+- 2026-06-03T14:08:23.649+02:00: Validation fix cycle: Demo 4 was blocked by prerequisites only in Nebula's Windows pass; environment tooling was installed and no Drax code changes were logged.

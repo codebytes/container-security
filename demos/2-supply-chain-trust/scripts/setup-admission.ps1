@@ -26,7 +26,6 @@ param(
 $ErrorActionPreference = 'Stop'
 $scriptDir   = $PSScriptRoot
 $projectRoot = Split-Path -Parent $scriptDir
-Set-Location $projectRoot
 
 # ── Preconditions ───────────────────────────────────────────────────────────
 if (-not (Get-Command kubectl -ErrorAction SilentlyContinue)) { Write-Error "kubectl is required"; exit 1 }
@@ -35,6 +34,9 @@ if ($LASTEXITCODE -ne 0) { Write-Error "No reachable cluster. Run scripts/setup-
 if (-not (Test-Path -LiteralPath (Join-Path $projectRoot 'cosign.pub'))) {
     Write-Error "cosign.pub not found in $projectRoot. Run 'cosign generate-key-pair' first."; exit 1
 }
+
+Push-Location $projectRoot
+try {
 
 # ── Step 1: Ensure Kyverno installed + insecure-registry access enabled ─────
 Write-Host "[1/6] Ensuring Kyverno is installed and can pull from the plain-HTTP registry" -ForegroundColor Cyan
@@ -171,3 +173,6 @@ Write-Host ""
 Write-Host "=== Admission demo complete ===" -ForegroundColor Green
 Write-Host "SIGNED -> guardian-signed (admitted) · UNSIGNED -> guardian-unsigned (rejected)"
 Write-Host "Tear everything down with: ./scripts/cleanup.ps1"
+} finally {
+    Pop-Location
+}

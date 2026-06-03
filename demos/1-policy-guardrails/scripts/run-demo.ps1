@@ -132,7 +132,7 @@ if ($SecureImageExists -eq 0 -or $InsecureImageExists -eq 0) {
     Write-Host "Building guardian-demo:secure and guardian-demo:insecure..."
     
     if (Test-Path "scripts/build-images.ps1") {
-        .\scripts\build-images.ps1 -ImageName "guardian-demo"
+        .\scripts\build-images.ps1 -ImageName "guardian-demo" -Registry ""
     } else {
         Write-Host "❌ Build script not found. Please run: .\scripts\build-images.ps1" -ForegroundColor Red
         exit 1

@@ -4,7 +4,7 @@
     Build demo images for Policy Guardrails Demo
 
 .PARAMETER Registry
-    Container registry (default: codebytes)
+    Container registry (default: local only)
 
 .PARAMETER ImageName
     Image name (default: guardian-demo)
@@ -53,20 +53,21 @@ if ($Help) {
     Write-Host ""
     Write-Host "Examples:"
     Write-Host "  .\build-images.ps1                                      # Build locally only"
-    Write-Host "  .\build-images.ps1 -Push                                # Build and push to default registry"
-    Write-Host "  .\build-images.ps1 -Registry 'local' -Push     # Build and push to custom registry"
+    Write-Host "  .\build-images.ps1 -Push                                # Build and push using the image name"
+    Write-Host "  .\build-images.ps1 -Registry 'local' -Push              # Build and push to custom registry"
     Write-Host "  `$env:REGISTRY='localhost:5000'; .\build-images.ps1      # Build for local registry"
     Write-Host ""
     exit 0
 }
 
 # Derived variables
-$SecureTag = "$Registry/$ImageName`:secure"
-$InsecureTag = "$Registry/$ImageName`:insecure"
+$TagPrefix = if ([string]::IsNullOrWhiteSpace($Registry)) { $ImageName } else { "$Registry/$ImageName" }
+$SecureTag = "${TagPrefix}:secure"
+$InsecureTag = "${TagPrefix}:insecure"
 
 Write-Host "🔨 Building Policy Guardrails Demo Images" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "Registry: $Registry"
+Write-Host "Registry: $(if ([string]::IsNullOrWhiteSpace($Registry)) { 'local only' } else { $Registry })"
 Write-Host "Image name: $ImageName"  
 Write-Host "Push to registry: $Push"
 Write-Host "Build platforms: $Platform"
@@ -118,6 +119,11 @@ if ($Push) {
         --file images/Dockerfile.secure `
         .
 }
+$SecureBuildExitCode = $LASTEXITCODE
+if ($SecureBuildExitCode -ne 0) {
+    Write-Host "❌ Secure image build failed (exit code $SecureBuildExitCode)" -ForegroundColor Red
+    exit $SecureBuildExitCode
+}
 Write-Host "✅ Secure image built successfully" -ForegroundColor Green
 
 Write-Host "[3/4] Building insecure image" -ForegroundColor Cyan
@@ -136,6 +142,11 @@ if ($Push) {
         --tag $InsecureTag `
         --file images/Dockerfile.insecure `
         .
+}
+$InsecureBuildExitCode = $LASTEXITCODE
+if ($InsecureBuildExitCode -ne 0) {
+    Write-Host "❌ Insecure image build failed (exit code $InsecureBuildExitCode)" -ForegroundColor Red
+    exit $InsecureBuildExitCode
 }
 Write-Host "✅ Insecure image built successfully" -ForegroundColor Green
 
@@ -170,7 +181,7 @@ if ($Push) {
     Write-Host "📤 Images pushed to registry: $Registry" -ForegroundColor Green
     Write-Host ""
     Write-Host "To use these images in the demo:"
-    Write-Host "  .\scripts\run-demo-interactive.ps1 -Image '$Registry/$ImageName'"
+    Write-Host "  .\scripts\run-demo-interactive.ps1 -Image '$TagPrefix'"
 } else {
     Write-Host "💡 Images built locally only (not pushed to registry)" -ForegroundColor Yellow
     Write-Host ""

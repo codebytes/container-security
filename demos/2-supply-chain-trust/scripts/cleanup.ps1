@@ -40,8 +40,6 @@ if (Test-Path -LiteralPath $artifactDir) {
             Remove-Item -Force -ErrorAction SilentlyContinue
     }
 }
-$sbom = Join-Path $projectRoot 'attestations/sbom.json'
-Remove-Item -LiteralPath $sbom -Force -ErrorAction SilentlyContinue
 Write-Host "✅ Artifacts cleaned"
 
 # ── Step 2: Remove in-cluster admission resources (idempotent) ──────────────
@@ -78,6 +76,6 @@ Write-Host "• Generated SBOMs and scan reports"
 Write-Host "• demo-gamora namespace, verify-supply-chain-signatures ClusterPolicy, guardian-cosign-pub secret"
 Write-Host "• Demo container images"
 Write-Host ""
-Write-Host "Note: Cosign keys in ../keys/ are preserved for reuse" -ForegroundColor Yellow
+Write-Host "Note: Cosign keypair files in the demo root are preserved for reuse" -ForegroundColor Yellow
 Write-Host "Note: The shared 'registry' container and kind cluster are NOT removed here;" -ForegroundColor Yellow
 Write-Host "      tear those down with scripts/teardown-kind-cluster.ps1"

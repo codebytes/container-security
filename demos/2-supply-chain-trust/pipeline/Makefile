@@ -2,7 +2,7 @@ REGISTRY ?= 127.0.0.1:5000
 IMAGE_NAME ?= guardian-demo-app
 TAG ?= v0.1.0-secure
 IMAGE := $(REGISTRY)/$(IMAGE_NAME):$(TAG)
-SBOM := ../attestations/sbom.json
+SBOM := ../artifacts/sbom.json
 COSIGN_KEY ?= ../cosign.key
 COSIGN_PUB ?= ../cosign.pub
 
@@ -22,6 +22,7 @@ build:
 	docker build -f Dockerfile -t $(IMAGE) ..
 
 sbom: build
+	mkdir -p $(dir $(SBOM))
 	syft scan $(IMAGE) -o json > $(SBOM)
 
 scan: build

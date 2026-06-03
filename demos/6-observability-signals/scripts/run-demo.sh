@@ -1,11 +1,50 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEMO_DIR="$(dirname "$SCRIPT_DIR")"
+DEMOS_DIR="$(dirname "$DEMO_DIR")"
+RUNTIME_DEMO_DIR="$DEMOS_DIR/4-runtime-detection"
+CLEANUP_SCRIPT="$SCRIPT_DIR/cleanup.sh"
 APP_DIR="$DEMO_DIR/app"
 COLLECTOR_DIR="$DEMO_DIR/collector"
 MANIFESTS_DIR="$DEMO_DIR/manifests"
+
+check_required_tools() {
+    local missing=()
+    for tool in docker kubectl helm; do
+        if ! command -v "$tool" > /dev/null 2>&1; then
+            missing+=("$tool")
+        fi
+    done
+
+    if (( ${#missing[@]} > 0 )); then
+        echo -e "\033[31mERROR: missing prerequisite(s): ${missing[*]}\033[0m" >&2
+        if [[ " ${missing[*]} " == *" helm "* ]]; then
+            echo -e "\033[33mInstall Helm before running this demo:\033[0m" >&2
+            echo "  Windows: winget install Helm.Helm" >&2
+            echo "  macOS:   brew install helm" >&2
+        fi
+        echo -e "\033[33mInstall the missing tool(s), then re-run this script.\033[0m" >&2
+        exit 1
+    fi
+}
+
+check_falco_handoff() {
+    if ! kubectl get namespace falco > /dev/null 2>&1 || \
+       ! kubectl get daemonset falco -n falco > /dev/null 2>&1 || \
+       ! helm status falco -n falco > /dev/null 2>&1; then
+        echo -e "\033[31mERROR: Falco is not deployed for the demo 6 handoff.\033[0m" >&2
+        echo -e "\033[33mDemo 6 expects demo 4 (demos/4-runtime-detection) to install the falco namespace, Helm release, and DaemonSet first.\033[0m" >&2
+        echo -e "\033[33mRun demo 4 first, then re-run this script:\033[0m" >&2
+        echo "  cd \"$RUNTIME_DEMO_DIR\"" >&2
+        echo "  ./scripts/run-demo.sh" >&2
+        exit 1
+    fi
+}
+
+check_required_tools
+check_falco_handoff
 
 # Interactive pause function
 pause() {
@@ -85,18 +124,14 @@ helm upgrade --install falcosidekick falcosecurity/falcosidekick \
   --create-namespace \
   -f "$MANIFESTS_DIR/falcosidekick-config.yaml" \
   --wait
-if helm status falco -n falco >/dev/null 2>&1; then
-  echo "Configuring Falco HTTP output to send alerts to Falcosidekick..."
-  helm upgrade falco falcosecurity/falco \
-    --namespace falco \
-    --reuse-values \
-    --set falco.json_output=true \
-    --set falco.http_output.enabled=true \
-    --set falco.http_output.url=http://falcosidekick.falco.svc.cluster.local:2801/ \
-    --wait
-else
-  echo "⚠️  Falco release not found. Run demo 4 first to generate security alerts."
-fi
+echo "Configuring Falco HTTP output to send alerts to Falcosidekick..."
+helm upgrade falco falcosecurity/falco \
+  --namespace falco \
+  --reuse-values \
+  --set falco.json_output=true \
+  --set falco.http_output.enabled=true \
+  --set falco.http_output.url=http://falcosidekick.falco.svc.cluster.local:2801/ \
+  --wait
 echo "✅ Falcosidekick configured"
 
 pause
@@ -153,12 +188,12 @@ echo "🔍 View live collector logs:"
 echo "   kubectl logs -f deployment/otel-collector -n $NAMESPACE"
 echo ""
 echo "🚨 Trigger Falco alerts (requires demo 4):"
-echo "   cd ../../4-runtime-detection/scripts && ./run-demo.sh"
+echo "   $RUNTIME_DEMO_DIR/scripts/run-demo.sh"
 
 pause
 
 echo -e "\033[36m[9/9] Cleanup\033[0m"
 echo "To remove all resources, run:"
-echo "   ./cleanup.sh"
+echo "   $CLEANUP_SCRIPT"
 echo ""
 echo -e "\033[32m✅ Demo complete!\033[0m"

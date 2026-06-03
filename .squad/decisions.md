@@ -186,6 +186,36 @@ Demo 2's failures are **independent** of the UID convention — they are cosign-
 - Cleanup tag fix: remove `guardian-telemetry:local` (what build/run creates), not the stale `ghcr.io/codebytes/guardian-telemetry:0.1.0`; `run-demo.ps1` now mirrors the `.sh` build+`kind load` flow.
 - Falco↔app correlation remains by **pod/namespace/timestamp**, not shared trace IDs (per the standing Demo 6 decision).
 
+### 2026-06-03T13:37:10.790+02:00: PowerShell demo scripts fail from README cwd
+**By:** Nebula
+**Context:** Clean-room Windows validation ran each PowerShell script from its demo directory, matching README examples such as `./scripts/run-demo.ps1`.
+**Decision/Finding:** Demo 2 `scripts/run-pipeline.ps1` and Demo 6 `scripts/run-demo.ps1` are cwd-sensitive and should resolve paths from `$PSScriptRoot`; Demo 1 `scripts/build-images.ps1` also builds invalid `/guardian-demo:*` tags when no registry is set.
+**Why:** Demo 2 changed to `../` from the demo root and Docker failed with `GetFileAttributesEx pipeline: The system cannot find the file specified`; Demo 6 failed `Push-Location ..\app` looking for `D:\container-security\demos\app`; Demo 1 generated `/guardian-demo:secure` and Docker rejected `invalid reference format`.
+
+### 2026-06-03T13:37:10.790+02:00: Cleanup scripts mutate tracked demo artifacts
+**By:** Nebula
+**Context:** Clean-room validation ran demo cleanup scripts after each demo to reset state.
+**Decision/Finding:** Cleanup scripts should not delete files committed to the repository, or those artifacts should be untracked/generated-only; otherwise a validation run leaves the worktree dirty.
+**Why:** Demo 2 cleanup deleted tracked `demos/2-supply-chain-trust/attestations/sbom.json`. Demo 3 cleanup deleted tracked `reports/*.txt` and `demo-results.txt` while leaving JSON reports behind, producing stale/dirty report state until restored manually.
+
+### 2026-06-03T13:37:10.790+02:00: Demo 1 uses plain local image tags by default
+**By:** Star-Lord
+**Context:** Demo 1's local image build broke on Windows when an empty registry produced `/guardian-demo:secure`. The demo manifests and run scripts already expect plain local tags like `guardian-demo:secure`.
+**Decision:** Keep Demo 1 registry default empty and build/use plain `guardian-demo:{secure,insecure}` tags unless a registry is explicitly passed to the build script.
+**Why:** This is the simplest path for Demo 1's local, unsigned image flow and stays aligned with its manifests and kind-load delivery, while Demo 2 remains the registry-centric signed-image demo.
+
+### 2026-06-03T13:37:10.790+02:00: Demo 2 script-root paths and preflight
+**By:** Gamora
+**Context:** Demo 2 pipeline failed differently depending on caller CWD and continued past missing Syft/Cosign prerequisites into confusing mid-pipeline command errors.
+**Decision:** Demo 2 executable scripts resolve demo-root paths from the script location, and `run-pipeline` fails fast with explicit tool/key preflight guidance before building.
+**Why:** This makes README-documented invocation paths reliable on Windows/macOS/Linux and turns missing supply-chain tooling into actionable setup feedback instead of misleading path or CommandNotFound failures.
+
+### 2026-06-03T13:37:10.790+02:00: Demo 6 requires demo 4 Falco handoff
+**By:** Mantis
+**Context:** Demo 6 installs Falcosidekick and the Falco-to-OTLP adapter, then configures an existing Falco Helm release to send alerts through Falcosidekick. Demo 4 is the repository convention for installing Falco into the `falco` namespace with the Helm chart.
+**Decision:** Treat demo 4's Falco Helm release, namespace, and DaemonSet as required prerequisites for demo 6; fail fast with a clear "run demo 4 first" message instead of attempting a second Falco install.
+**Why:** This preserves cleanup ownership, keeps Falco rule configuration centralized in demo 4, and makes the cross-demo observability handoff explicit before demo 6 builds or deploys anything.
+
 ## Governance
 
 - All meaningful changes require team consensus

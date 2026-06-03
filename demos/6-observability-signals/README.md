@@ -11,9 +11,11 @@ Connect application telemetry (OpenTelemetry) and runtime security alerts (Falco
 
 ## Prerequisites
 - Kubernetes cluster with `kubectl` access.
-- `helm` 3.x.
-- `docker` or `nerdctl` (for optional local builds).
-- Falco demo (`demos/4-runtime-detection`) installed or re-run for alert generation.
+- `docker` for the local `guardian-telemetry:local` image build.
+- `helm` 3.x for Falcosidekick and Falco configuration.
+  - Windows: `winget install Helm.Helm`
+  - macOS: `brew install helm`
+- Demo 4 (`demos/4-runtime-detection`) must be run first and leave the `falco` namespace, `falco` Helm release, and Falco DaemonSet installed. Demo 6 installs Falcosidekick plus the OTLP adapter, then updates that existing Falco release to send alerts to Falcosidekick.
 - No external Prometheus/Loki stack is required for the lightweight path: the collector logs spans/logs and exposes Prometheus-format metrics on port 9464.
 
 ## Environment Variables
@@ -32,7 +34,7 @@ $env:IMAGE_TAG = "ghcr.io/codebytes/guardian-telemetry:0.1.0"
    - Apply manifest so pods export OTLP spans/metrics/logs to collector.
 3. **Connect Falco Alerts**
    - Install Falcosidekick using `manifests/falcosidekick-config.yaml` and deploy `manifests/falco-otlp-adapter.yaml` to translate Falcosidekick JSON webhooks into OTLP logs.
-   - If the `falco` Helm release from demo 4 exists, the Bash script configures Falco `http_output` to post to Falcosidekick automatically.
+   - The scripts require the `falco` Helm release from demo 4 and configure Falco `http_output` to post to Falcosidekick automatically.
 4. **Trigger Events**
    - Run load job (`manifests/load-generator.yaml`) to produce standard traces/metrics.
    - Trigger Falco rule (from runtime demo) to create security alert referencing namespace/pod.

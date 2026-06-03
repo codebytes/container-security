@@ -6,7 +6,7 @@ set -e
 
 # Resolve paths relative to this script's demo root so cleanup works regardless
 # of the caller's CWD (the README documents running it from the demo root).
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 project_root="$(dirname "$script_dir")"
 cd "$project_root"
 
@@ -23,7 +23,6 @@ echo ""
 
 echo -e "${CYAN}[1/3] Removing generated artifacts${NC}"
 rm -rf artifacts/*.json artifacts/*.txt artifacts/*.spdx 2>/dev/null || true
-rm -f attestations/sbom.json 2>/dev/null || true
 echo "✅ Artifacts cleaned"
 
 echo -e "${CYAN}[2/3] Removing in-cluster admission resources${NC}"
@@ -56,6 +55,6 @@ echo "• Generated SBOMs and scan reports"
 echo "• demo-gamora namespace, verify-supply-chain-signatures ClusterPolicy, guardian-cosign-pub secret"
 echo "• Demo container images"
 echo ""
-echo -e "${YELLOW}Note:${NC} Cosign keys in ../keys/ are preserved for reuse"
+echo -e "${YELLOW}Note:${NC} Cosign keypair files in the demo root are preserved for reuse"
 echo -e "${YELLOW}Note:${NC} The shared 'registry' container and kind cluster are NOT removed here;"
 echo "      tear those down with scripts/teardown-kind-cluster.sh"

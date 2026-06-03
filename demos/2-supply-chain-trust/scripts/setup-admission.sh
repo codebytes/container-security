@@ -28,7 +28,7 @@ log_success() { echo -e "${GREEN}$1${NC}"; }
 log_warning() { echo -e "${YELLOW}$1${NC}"; }
 log_error()   { echo -e "${RED}$1${NC}"; }
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 project_root="$(dirname "$script_dir")"
 cd "$project_root"
 

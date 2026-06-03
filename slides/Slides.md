@@ -32,7 +32,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ## Chris Ayers
 
-### Principal Software Engineer<br>Azure CXP AzRel<br>Microsoft
+### Principal Software Engineer<br>Azure EngOps AzRel<br>Microsoft
 
 <i class="fa-brands fa-bluesky"></i> BlueSky: [@chris-ayers.com](https://bsky.app/profile/chris-ayers.com)
 <i class="fa-brands fa-linkedin"></i> LinkedIn: - [chris\-l\-ayers](https://linkedin.com/in/chris-l-ayers/)
@@ -44,6 +44,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ---
 
 ## Container Security: The Challenge
+
+![bg right:24%](https://plus.unsplash.com/premium_photo-1661764393655-1dbffee8c0ce?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
 
 **Modern Container Threats:**
 - Supply Chain Attacks (xz-utils, LiteLLM, Axios)
@@ -76,47 +78,52 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ## Why Layering Matters
 
-**No single control is perfect** → Layer them (Swiss cheese model)
+![bg right:24%](https://plus.unsplash.com/premium_photo-1674669009418-2643aa58b11b?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
 
-**Log4Shell (CVE-2021-44228) proved it:**
+**Security controls fail differently. Design for overlap, not perfection.**
 
-| Layer | Response |
-|-------|----------|
-| **Scanning** | Found vulnerable Log4j in images |
-| **Runtime** | Detected JNDI exploitation attempts |
-| **Network** | Blocked C2 communication |
-| **Observability** | Correlated timeline, full reconstruction |
+**Log4Shell (CVE-2021-44228) is the pattern:**
 
-**Different layers fail differently — overlapping controls matter**
+| Layer | What It Contributed |
+|-------|----------------------|
+| **Scanning** | Flagged vulnerable Log4j packages in images |
+| **Runtime** | Detected suspicious JNDI exploitation behavior |
+| **Network** | Blocked outbound C2 traffic |
+| **Observability** | Reconstructed timeline across signals |
 
 ---
 
 ## Shift Left + Shield Right
 
-**Shift Left** = Prevent known bad (build-time)
-- SBOM, vulnerability scanning, image signing
-- Goal: catch 80% before deploy
+![bg right:24%](https://plus.unsplash.com/premium_photo-1661877737564-3dfd7282efcb?q=80&w=900&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
 
-**Shield Right** = Detect & contain what gets through (runtime)
-- Behavioral detection, network policies, observability
-- Why: recent M-Trends reports show attackers can still operate undetected for days
+| Motion | Focus | Core Controls | Outcome |
+|--------|-------|---------------|---------|
+| **Shift Left** | Prevent known bad at build time | SBOM, vuln scanning, image signing, policy checks | Most issues stopped before deploy |
+| **Shield Right** | Detect and contain runtime abuse | Behavioral detection, NetworkPolicy, observability | Faster detection and blast-radius reduction |
 
-**Both required.** Prevention alone is not enough.
+**Both are required:** prevention reduces volume, runtime defense reduces impact.
 
 ---
 
 ## Principles We'll Apply Throughout
 
-**Policy as Code:** Make the gate explicit, reviewed, and auditable *(→ Star-Lord)*
-**Supply Chain Security:** You don't control your dependencies — verify them *(→ Gamora)*
-**Least Privilege:** Ship less, run smaller, expose fewer tools *(→ Rocket)*
-**Runtime Awareness:** Assume something gets through; watch behavior *(→ Drax)*
-**Zero Trust:** Never trust, always verify — even inside the cluster *(→ Groot)*
-**Security Observability:** Siloed tools miss correlated attacks *(→ Mantis)*
+| Principle | Guardian | In Practice |
+|----------|----------|-------------|
+| **Policy as Code** | **Star-Lord** | Explicit, versioned, auditable gates |
+| **Supply Chain Security** | **Gamora** | Verify artifacts and provenance |
+| **Least Privilege** | **Rocket** | Smaller images, fewer privileges |
+| **Runtime Awareness** | **Drax** | Detect hostile behavior fast |
+| **Zero Trust** | **Groot** | Enforce east-west boundaries |
+| **Security Observability** | **Mantis** | Correlate signals end-to-end |
+
+---
+
+## Standards + Tooling
 
 **Standards:** NIST SP 800-207 &nbsp;|&nbsp; SLSA (OpenSSF)
 
-**Our tools:** CNCF-first — portable, community-driven, production-proven
+**Tooling approach:** CNCF-first, portable, community-driven, production-proven
 - **Graduated:** Falco, OPA, Cilium, Prometheus, Kyverno, OpenTelemetry
 - **Incubating:** Trivy, Sigstore
 
@@ -206,6 +213,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ---
 
 ## Gamora: The Supply Chain Problem
+
+![bg right:24%](https://plus.unsplash.com/premium_photo-1661879449050-069f67e200bd?q=80&w=822&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
 
 **Trust is a vulnerability.** You don't control:
 - Base images (Docker Hub, public registries)
@@ -364,6 +373,8 @@ ENTRYPOINT ["python", "/app/main.py"]
 
 ## Drax: Why Runtime Detection?
 
+![bg right:24%](https://plus.unsplash.com/premium_photo-1661764570116-b1b0a2da783c?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
+
 **Build-time scanning can't detect:**
 
 - **Zero-day exploits** → No CVE exists yet
@@ -439,6 +450,8 @@ Use Tetragon when you need real-time kernel-level blocking
 ---
 
 ## Groot: The Lateral Movement Problem
+
+![bg right:24%](https://plus.unsplash.com/premium_photo-1674669009418-2643aa58b11b?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
 
 **Kubernetes Default: Flat Network**
 

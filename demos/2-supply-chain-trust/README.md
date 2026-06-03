@@ -11,10 +11,32 @@ Illustrate a secure image pipeline that produces an SBOM, scans for vulnerabilit
 
 ## Prerequisites
 - Docker / container runtime (or `nerdctl`)
-- `syft`, `trivy`, `cosign`
-- Access to OCI registry supporting signatures (GitHub Container Registry, Harbor, etc.)
-- Kubernetes cluster with Kyverno (reuse from policy demo) or Gatekeeper for admission policy.
+- `kubectl` and a Kubernetes cluster with Kyverno (the admission script can install Kyverno if needed)
+- `syft` for SBOM generation
+- `trivy` for vulnerability scanning
+- `cosign` for signing and verifying images
+- Access to an OCI registry supporting signatures (the shared local kind registry is the default)
+- A local Cosign key pair in this demo root (`cosign.key` + `cosign.pub`)
 - Optional: `make` for pipeline convenience.
+
+Install tools:
+
+```powershell
+# Windows
+winget install -e --id Docker.DockerDesktop
+winget install -e --id Kubernetes.kubectl
+winget install -e --id Anchore.Syft
+winget install -e --id AquaSecurity.Trivy
+winget install -e --id Sigstore.Cosign
+```
+
+```bash
+# macOS
+brew install --cask docker
+brew install kubectl syft trivy cosign
+```
+
+Manual install links: [Docker](https://docs.docker.com/get-docker/), [kubectl](https://kubernetes.io/docs/tasks/tools/), [Syft](https://github.com/anchore/syft#installation), [Trivy](https://aquasecurity.github.io/trivy/latest/getting-started/installation/), [Cosign](https://docs.sigstore.dev/cosign/installation/).
 
 > ⚠️ **macOS port 5000 / AirPlay Receiver collision.** On macOS, `localhost:5000`
 > resolves to IPv6 `::1`, which **AirPlay Receiver / Control Center** binds (returns
@@ -40,13 +62,14 @@ restore a hard, production-style gate.
 
 ## Key Pair Setup
 
-Before running the demo, generate your own Cosign key pair:
+Before running the demo, generate your own Cosign key pair from the demo root:
 
 ```bash
+cd demos/2-supply-chain-trust
 cosign generate-key-pair
 ```
 
-This creates `cosign.key` (private) and `cosign.pub` (public) in the current directory.
+This creates `cosign.key` (private) and `cosign.pub` (public) in the demo directory.
 
 > ⚠️ **Never commit the PRIVATE key `cosign.key` to version control.** Only the private
 > key is secret. The public key `cosign.pub` is **safe to share and is committed** in this
@@ -99,7 +122,7 @@ $env:DEMO_TAG="v0.1.0-secure"
    - Use `pipeline/Dockerfile` to build the demo service.
    - Tag image as `$DEMO_REGISTRY/$DEMO_IMAGE_NAME:$DEMO_TAG`.
 2. **Generate SBOM**
-   - Run `syft scan` to create `attestations/sbom.json`.
+   - Run `syft scan` to create `artifacts/sbom.json`.
    - Upload SBOM to artifact storage (or commit).
 3. **Scan for Vulnerabilities**
    - Run `trivy image` with `--exit-code 1 --severity HIGH,CRITICAL` to enforce gating.
@@ -179,14 +202,15 @@ $env:DEMO_TAG="v0.1.0-secure"
 | `scripts/setup-admission.sh` | Bash: automated in-cluster admission demo (Kyverno insecure-registry enable + signed ADMITTED / unsigned REJECTED) |
 | `scripts/setup-admission.ps1` | PowerShell twin of `setup-admission.sh` |
 | `scripts/cleanup.sh` / `scripts/cleanup.ps1` | Remove demo artifacts, images, namespace, ClusterPolicy, and the cosign public-key secret |
-| `attestations/` | SBOMs and Cosign bundles |
+| `artifacts/` | Gitignored generated SBOMs and scan reports |
+| `attestations/` | Tracked sample/reference SBOMs and Cosign materials |
 | `manifests/policy-require-signature.yaml` | Kyverno verifyImages (Enforce) + scan-label policy, scoped to `demo-gamora` |
 | `manifests/demo-namespace.yaml` | `demo-gamora` namespace for the admission demo |
 | `manifests/deploy-signed.yaml` | Signed image Deployment (expect ADMITTED) |
 | `manifests/deploy-unsigned.yaml` | Unsigned image Deployment (expect REJECTED) |
 
 ## Verification Checklist
-- [ ] SBOM file generated and stored in `attestations/sbom.json`.
+- [ ] SBOM file generated and stored in `artifacts/sbom.json`.
 - [ ] Trivy scan passes with acceptable severity (or intentionally fails to demonstrate gating).
 - [ ] Cosign signature and attestations exist (`cosign verify` success).
 - [ ] Unsigned deployment rejected by admission controller.
@@ -212,7 +236,7 @@ kubectl delete -f manifests/deploy-signed.yaml --ignore-not-found
 kubectl delete -f manifests/policy-require-signature.yaml --ignore-not-found
 kubectl delete -f manifests/demo-namespace.yaml --ignore-not-found
 kubectl -n kyverno delete secret guardian-cosign-pub --ignore-not-found
-rm -f attestations/sbom.json
+rm -f artifacts/sbom.json
 ```
 ```powershell
 kubectl delete -f manifests/deploy-unsigned.yaml --ignore-not-found
@@ -220,7 +244,7 @@ kubectl delete -f manifests/deploy-signed.yaml --ignore-not-found
 kubectl delete -f manifests/policy-require-signature.yaml --ignore-not-found
 kubectl delete -f manifests/demo-namespace.yaml --ignore-not-found
 kubectl -n kyverno delete secret guardian-cosign-pub --ignore-not-found
-Remove-Item attestations/sbom.json -Force -ErrorAction SilentlyContinue
+Remove-Item artifacts/sbom.json -Force -ErrorAction SilentlyContinue
 ```
 </details>
 

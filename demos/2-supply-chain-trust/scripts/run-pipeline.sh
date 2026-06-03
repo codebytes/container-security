@@ -4,6 +4,15 @@
 
 set -e  # Exit on any error
 
+# Resolve paths relative to this script so it works from the demo root, scripts/,
+# or any other caller CWD.
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+project_root="$(dirname "$script_dir")"
+artifact_dir="$project_root/artifacts"
+sbom_path="$artifact_dir/sbom.json"
+cosign_key_path="$project_root/cosign.key"
+cosign_pub_path="$project_root/cosign.pub"
+
 # Default parameters
 # Default to 127.0.0.1:5000 (NOT localhost:5000): on macOS, AirPlay Receiver
 # (Control Center / AirTunes) binds *:5000 and localhost resolves to ::1 ->
@@ -41,6 +50,41 @@ log_error() {
     echo -e "${RED}$1${NC}"
 }
 
+print_install_instructions() {
+    case "$1" in
+        docker)
+            log_warning "  docker:"
+            echo "    Windows: winget install -e --id Docker.DockerDesktop"
+            echo "    macOS:   brew install --cask docker"
+            echo "    Manual:  https://docs.docker.com/get-docker/"
+            ;;
+        kubectl)
+            log_warning "  kubectl:"
+            echo "    Windows: winget install -e --id Kubernetes.kubectl"
+            echo "    macOS:   brew install kubectl"
+            echo "    Manual:  https://kubernetes.io/docs/tasks/tools/"
+            ;;
+        syft)
+            log_warning "  syft:"
+            echo "    Windows: winget install -e --id Anchore.Syft"
+            echo "    macOS:   brew install syft"
+            echo "    Manual:  https://github.com/anchore/syft#installation"
+            ;;
+        trivy)
+            log_warning "  trivy:"
+            echo "    Windows: winget install -e --id AquaSecurity.Trivy"
+            echo "    macOS:   brew install trivy"
+            echo "    Manual:  https://aquasecurity.github.io/trivy/latest/getting-started/installation/"
+            ;;
+        cosign)
+            log_warning "  cosign:"
+            echo "    Windows: winget install -e --id Sigstore.Cosign"
+            echo "    macOS:   brew install cosign"
+            echo "    Manual:  https://docs.sigstore.dev/cosign/installation/"
+            ;;
+    esac
+}
+
 # cosign 3.0.6 defaults to --use-signing-config=true / --new-bundle-format=true,
 # which stores the signature as an OCI 1.1 referrer (tag sha256-<digest>) instead
 # of the legacy sha256-<digest>.sig that Kyverno's verifyImages reader expects ->
@@ -64,35 +108,42 @@ cosign_verify_flags() {
     printf '%s\n' "${flags[@]}"
 }
 
-# Validate required tools
+# Validate required tools and key material before any pipeline work starts.
 check_tools() {
-    log_info "Checking required tools..."
-    
     local missing_tools=()
-    
-    if ! command -v docker &> /dev/null; then
-        missing_tools+=("docker")
-    fi
-    
-    if ! command -v syft &> /dev/null; then
-        missing_tools+=("syft")
-    fi
-    
-    if ! command -v trivy &> /dev/null; then
-        missing_tools+=("trivy")
-    fi
-    
-    if ! command -v cosign &> /dev/null; then
-        missing_tools+=("cosign")
-    fi
-    
+    local tool
+
+    for tool in docker kubectl syft trivy cosign; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            missing_tools+=("$tool")
+        fi
+    done
+
     if [ ${#missing_tools[@]} -ne 0 ]; then
-        log_error "Missing required tools: ${missing_tools[*]}"
-        log_info "Please install the missing tools and try again."
+        for tool in "${missing_tools[@]}"; do
+            log_error "ERROR: missing prerequisite: $tool"
+        done
+        echo
+        log_info "Install the missing tool(s), then rerun this pipeline:"
+        for tool in "${missing_tools[@]}"; do
+            print_install_instructions "$tool"
+        done
+    fi
+
+    if [ ! -f "$cosign_key_path" ]; then
+        log_error "ERROR: missing prerequisite: cosign.key"
+        log_info "Generate a local key pair from the demo root:"
+        echo "  cd \"$project_root\""
+        echo "  cosign generate-key-pair"
+        echo "This creates cosign.key (private, gitignored) and cosign.pub (public)."
+        missing_tools+=("cosign.key")
+    fi
+
+    if [ ${#missing_tools[@]} -ne 0 ]; then
         exit 1
     fi
-    
-    log_success "All required tools are available"
+
+    log_success "All required tools and cosign.key are available"
 }
 
 # Ensure a local registry is available when targeting localhost so `docker push`
@@ -123,8 +174,6 @@ start_registry() {
 
 # Main pipeline
 main() {
-    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local project_root="$(dirname "$script_dir")"
     local full_image="${REGISTRY}/${IMAGE_NAME}:${TAG}"
     
     log_info "=== Supply Chain Trust Pipeline ==="
@@ -134,17 +183,17 @@ main() {
     log_info "Full Image: $full_image"
     echo
     
-    # Change to project root
+    # Change to project root resolved from this script's location.
     cd "$project_root"
     
-    # Check tools first
+    # Check tools and key material before doing any work.
     check_tools
 
     # Bootstrap a local registry if needed so docker push succeeds
     start_registry
 
-    # Ensure attestations directory exists
-    mkdir -p attestations
+    # Ensure generated artifacts directory exists (gitignored).
+    mkdir -p "$artifact_dir"
     
     # Step 1: Build image
     log_info "[1/6] Building image $full_image"
@@ -158,8 +207,8 @@ main() {
     
     # Step 2: Generate SBOM
     log_info "[2/6] Generating SBOM with Syft"
-    if syft scan "$full_image" -o json > attestations/sbom.json; then
-        local package_count=$(jq '.artifacts[0].packages | length' attestations/sbom.json 2>/dev/null || echo "unknown")
+    if syft scan "$full_image" -o json > "$sbom_path"; then
+        local package_count=$(jq '.artifacts[0].packages | length' "$sbom_path" 2>/dev/null || echo "unknown")
         log_success "✅ SBOM generated successfully ($package_count packages)"
     else
         log_error "❌ SBOM generation failed"
@@ -222,7 +271,7 @@ main() {
     local sign_flags
     # shellcheck disable=SC2207
     sign_flags=( $(cosign_sign_flags) )
-    if COSIGN_PASSWORD="${COSIGN_PASSWORD-}" cosign sign "${sign_flags[@]}" --key cosign.key "$sign_ref"; then
+    if COSIGN_PASSWORD="${COSIGN_PASSWORD-}" cosign sign "${sign_flags[@]}" --key "$cosign_key_path" "$sign_ref"; then
         log_success "✅ Image signed successfully (legacy .sig format — Kyverno-compatible)"
     else
         log_warning "⚠️  Image signing failed (registry access or cosign.key required)"
@@ -235,7 +284,7 @@ main() {
     local verify_flags
     # shellcheck disable=SC2207
     verify_flags=( $(cosign_verify_flags) )
-    if cosign verify "${verify_flags[@]}" --key cosign.pub "$sign_ref"; then
+    if cosign verify "${verify_flags[@]}" --key "$cosign_pub_path" "$sign_ref"; then
         log_success "✅ Signature verified successfully"
     else
         log_warning "⚠️  Signature verification failed (expected without proper signing setup)"
@@ -244,7 +293,7 @@ main() {
     echo
     
     log_success "=== Pipeline Completed ==="
-    log_info "SBOM stored in: attestations/sbom.json"
+    log_info "SBOM stored in: artifacts/sbom.json"
     log_info "Next step — run the in-cluster admission demo (signed ADMITTED vs unsigned REJECTED)"
     log_info "fully automatically (enables Kyverno insecure-registry access, injects the public"
     log_info "key, applies the policy, deploys signed, builds+deploys a DISTINCT unsigned image):"
@@ -264,7 +313,8 @@ show_usage() {
     echo "Example:"
     echo "  $0 ghcr.io/myorg my-app v1.0.0"
     echo
-    echo "Required tools: docker, syft, trivy, cosign"
+    echo "Required tools: docker, kubectl, syft, trivy, cosign"
+    echo "Required key: cosign.key in the demo root (run: cosign generate-key-pair)"
 }
 
 # Check for help flag

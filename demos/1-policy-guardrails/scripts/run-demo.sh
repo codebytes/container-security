@@ -120,7 +120,7 @@ if [ "${SECURE_IMAGE_EXISTS:-0}" -eq 0 ] || [ "${INSECURE_IMAGE_EXISTS:-0}" -eq 
     echo "Building guardian-demo:secure and guardian-demo:insecure..."
     
     if [ -f "scripts/build-images.sh" ]; then
-        ./scripts/build-images.sh --image-name guardian-demo
+        ./scripts/build-images.sh --image-name guardian-demo --registry ""
     else
         echo -e "${RED}❌ Build script not found. Please run: ./scripts/build-images.sh${NC}"
         exit 1

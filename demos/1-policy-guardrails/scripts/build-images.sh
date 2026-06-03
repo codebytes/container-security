@@ -37,7 +37,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  $0                                    # Build locally only"
-    echo "  $0 --push                            # Build and push to default registry"
+    echo "  $0 --push                            # Build and push using the image name"
     echo "  $0 --registry local-registry --push  # Build and push to custom registry"
     echo "  REGISTRY=localhost:5000 $0           # Build for local registry"
     echo ""
@@ -122,18 +122,24 @@ echo -e "${CYAN}[2/4] Building secure image${NC}"
 echo "Building: $SECURE_TAG"
 if [ "$PUSH_TO_REGISTRY" = "true" ]; then
     # Build multi-platform and push
-    docker buildx build \
+    if ! docker buildx build \
         --platform "$BUILD_PLATFORM" \
         --tag "$SECURE_TAG" \
         --file images/Dockerfile.secure \
         --push \
-        .
+        .; then
+        echo -e "${RED}❌ Secure image build failed${NC}"
+        exit 1
+    fi
 else
     # Build for local use
-    docker build \
+    if ! docker build \
         --tag "$SECURE_TAG" \
         --file images/Dockerfile.secure \
-        .
+        .; then
+        echo -e "${RED}❌ Secure image build failed${NC}"
+        exit 1
+    fi
 fi
 echo -e "${GREEN}✅ Secure image built successfully${NC}"
 
@@ -141,18 +147,24 @@ echo -e "${CYAN}[3/4] Building insecure image${NC}"
 echo "Building: $INSECURE_TAG"
 if [ "$PUSH_TO_REGISTRY" = "true" ]; then
     # Build multi-platform and push
-    docker buildx build \
+    if ! docker buildx build \
         --platform "$BUILD_PLATFORM" \
         --tag "$INSECURE_TAG" \
         --file images/Dockerfile.insecure \
         --push \
-        .
+        .; then
+        echo -e "${RED}❌ Insecure image build failed${NC}"
+        exit 1
+    fi
 else
     # Build for local use
-    docker build \
+    if ! docker build \
         --tag "$INSECURE_TAG" \
         --file images/Dockerfile.insecure \
-        .
+        .; then
+        echo -e "${RED}❌ Insecure image build failed${NC}"
+        exit 1
+    fi
 fi
 echo -e "${GREEN}✅ Insecure image built successfully${NC}"
 
