@@ -10,10 +10,10 @@
 Demonstrate deny-by-default Kubernetes NetworkPolicies that explicitly allow service-to-service traffic while blocking unauthorized access attempts.
 
 ## Outcomes
-- Deploy a simple three-tier demo (frontend → api → db).
+- Deploy simple frontend, api, and db workloads.
 - Apply default deny policies for namespace ingress/egress.
-- Define explicit allow rules for approved flows.
-- Validate blocked traffic using curl test pod (`curlimages/curl`).
+- Define explicit allow rules for approved frontend→api and api→db policy paths.
+- Validate allowed and blocked paths using labeled probe pods (`curlimages/curl` and `postgres:16-alpine`).
 
 ## Prerequisites
 - Kubernetes cluster with `kubectl` access.
@@ -39,29 +39,45 @@ Demonstrate deny-by-default Kubernetes NetworkPolicies that explicitly allow ser
    ```powershell
    kubectl create namespace demo-groot
    ```
-2. Deploy demo services and baseline policies:
+2. Deploy demo services first to show the default flat network posture:
    ```powershell
    kubectl apply -f manifests/base-services.yaml
-   kubectl apply -f manifests/default-deny.yaml
-   kubectl apply -f manifests/allow-policies.yaml
    ```
 
 ## Demo Flow
-1. **Verify Healthy Flow**
-   - Port-forward frontend: `kubectl port-forward svc/frontend -n demo-groot 8080:80`.
-   - Access `http://localhost:8080` to ensure chain works.
-2. **Test Blocked Traffic**
-   - Launch `manifests/tester-pod.yaml`.
-   - Run:
+1. **Show the Baseline Risk**
+   - Deploy the three-tier app with no NetworkPolicies yet.
+   - Explain that Kubernetes networking is flat by default: there is no policy boundary until Groot creates one.
+2. **Apply Default Deny**
+   - Apply namespace-wide deny policies:
      ```powershell
-     kubectl exec -n demo-groot tester -- curl -sS api:8080/get
-     kubectl exec -n demo-groot tester -- curl -sS db:5432
+     kubectl apply -f manifests/default-deny.yaml
      ```
-   - Expect first command to fail (deny) and second to fail (deny); only frontend→api→db should succeed.
-3. **Allow Specific Diagnostic**
+   - At this point, all ingress/egress is denied unless explicitly allowed.
+3. **Allow Approved Service Paths**
+   - Apply allow rules for frontend→api, api→db, and DNS:
+     ```powershell
+     kubectl apply -f manifests/allow-policies.yaml
+     ```
+   - These rules permit the approved policy paths; the stock demo workloads do not implement a real frontend→api→db application call chain.
+   - Optional UI view: `kubectl port-forward svc/frontend -n demo-groot 8080:80`, then open `http://localhost:8080`.
+4. **Test Blocked and Allowed Traffic**
+   - Launch `manifests/tester-pod.yaml`.
+   - Run blocked checks from the unauthorized tester pod/label:
+     ```powershell
+     kubectl exec -n demo-groot tester -- curl -sS --connect-timeout 3 api:8080/get
+     kubectl run tester-db-probe -n demo-groot --rm -i --restart=Never --labels=app=tester --image=postgres:16-alpine --command -- pg_isready -h db -p 5432 -U postgres -t 3
+     ```
+   - Run allowed checks from pods with the approved labels:
+     ```powershell
+     kubectl run frontend-probe -n demo-groot --rm -i --restart=Never --labels=app=frontend --image=curlimages/curl:8.8.0 --command -- curl -sS --connect-timeout 3 api:8080/get
+     kubectl run api-db-probe -n demo-groot --rm -i --restart=Never --labels=app=api --image=postgres:16-alpine --command -- pg_isready -h db -p 5432 -U postgres -t 3
+     ```
+   - Expect tester→api and tester→db to fail, while frontend-labeled→api and api-labeled→db probes succeed.
+5. **Allow Specific Diagnostic**
    - Apply `manifests/allow-tester-api.yaml` to temporarily permit tester → api.
    - Re-run curl to show targeted allowance.
-4. **Cleanup**
+6. **Cleanup**
    - Delete namespace or revoke temp policy.
 
 ## Files & Directories
@@ -70,14 +86,14 @@ Demonstrate deny-by-default Kubernetes NetworkPolicies that explicitly allow ser
 | `manifests/base-services.yaml` | Deploy frontend, api, db deployments/services |
 | `manifests/default-deny.yaml` | Namespace-wide deny policies |
 | `manifests/allow-policies.yaml` | Explicit allow rules for legitimate flows |
-| `manifests/tester-pod.yaml` | curl pod for validation (`curlimages/curl`) |
+| `manifests/tester-pod.yaml` | unauthorized curl pod for tester→api validation (`curlimages/curl`) |
 | `manifests/allow-tester-api.yaml` | Temporary diagnostic allowance |
 | `scripts/run-demo.sh` / `scripts/run-demo.ps1` | Automates the test sequence. Set `DEMO_AUTOMATED=true` for non-interactive Bash runs. |
 
 ## Verification Checklist
 - [ ] Default deny policies applied (no cross-pod traffic without allow).
-- [ ] Frontend can reach API; API can reach DB.
-- [ ] Tester pod initially blocked from API/DB.
+- [ ] Frontend-labeled probe can reach API; API-labeled probe can reach DB.
+- [ ] Tester pod/label initially blocked from API/DB.
 - [ ] Temporary policy allows only intended traffic.
 
 ## Cleanup

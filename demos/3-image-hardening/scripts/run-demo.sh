@@ -52,16 +52,18 @@ count_vulns() {
 # Trivy/Docker are unavailable. The counts mirror the committed real reports
 # (reports/before.txt, reports/after.txt) so every "truth" stays consistent.
 write_fallback_json() {
-    local file="$1" crit="$2" high="$3" med="$4" low="$5"
+    local file="$1" crit="$2" high="$3" med="$4" low="$5" unknown="$6"
     if command -v jq &> /dev/null; then
         jq -n \
             --argjson c "$crit" --argjson h "$high" \
-            --argjson m "$med" --argjson l "$low" '
+            --argjson m "$med" --argjson l "$low" \
+            --argjson u "$unknown" '
             {Results: [{Target: "fallback (simulated)", Vulnerabilities:
                 ([range(0; $c) | {Severity: "CRITICAL"}] +
                  [range(0; $h) | {Severity: "HIGH"}]   +
                  [range(0; $m) | {Severity: "MEDIUM"}] +
-                 [range(0; $l) | {Severity: "LOW"}])}]}' > "$file"
+                 [range(0; $l) | {Severity: "LOW"}]    +
+                 [range(0; $u) | {Severity: "UNKNOWN"}])}]}' > "$file"
     fi
 }
 
@@ -87,11 +89,11 @@ if command -v trivy &> /dev/null; then
         echo -e "${GREEN}✅ Baseline scan completed${NC}"
     } || {
         echo -e "${YELLOW}⚠️  Trivy scan failed - writing simulated JSON (counts match committed reports)${NC}"
-        write_fallback_json "${REPORTS_DIR}/before.json" 41 468 1319 1609
+        write_fallback_json "${REPORTS_DIR}/before.json" 195 1127 3137 2016 26
     }
 else
     echo -e "${YELLOW}⚠️  Trivy not available - writing simulated JSON (counts match committed reports)${NC}"
-    write_fallback_json "${REPORTS_DIR}/before.json" 41 468 1319 1609
+    write_fallback_json "${REPORTS_DIR}/before.json" 195 1127 3137 2016 26
 fi
 
 echo ""
@@ -110,11 +112,11 @@ if command -v trivy &> /dev/null; then
         echo -e "${GREEN}✅ Hardened scan completed${NC}"
     } || {
         echo -e "${YELLOW}⚠️  Trivy scan failed - writing simulated JSON (counts match committed reports)${NC}"
-        write_fallback_json "${REPORTS_DIR}/after.json" 2 6 11 30
+        write_fallback_json "${REPORTS_DIR}/after.json" 5 21 88 51 1
     }
 else
     echo -e "${YELLOW}⚠️  Trivy not available - writing simulated JSON (counts match committed reports)${NC}"
-    write_fallback_json "${REPORTS_DIR}/after.json" 2 6 11 30
+    write_fallback_json "${REPORTS_DIR}/after.json" 5 21 88 51 1
 fi
 
 echo ""

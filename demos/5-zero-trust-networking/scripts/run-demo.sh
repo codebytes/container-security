@@ -21,10 +21,10 @@ echo -e "\033[36m║  Zero Trust Networking Demo              ║\033[0m"
 echo -e "\033[36m╚════════════════════════════════════════════╝\033[0m"
 echo ""
 echo "This demo demonstrates Kubernetes Network Policies for Zero Trust:"
-echo "  1. Deploy a 3-tier application (frontend, api, db)"
+echo "  1. Deploy frontend, api, and db workloads"
 echo "  2. Apply default-deny policies (block all traffic)"
-echo "  3. Selectively allow only required communication"
-echo "  4. Verify traffic is blocked/allowed as expected"
+echo "  3. Selectively allow only required policy paths"
+echo "  4. Verify permitted and denied reachability with labeled probes"
 echo ""
 echo -e "\033[33m⚠️  IMPORTANT: Network Policies require a CNI plugin\033[0m"
 echo ""
@@ -109,11 +109,11 @@ echo "✅ Tester pod ready"
 
 pause
 
-echo -e "\033[36m[6/8] Testing blocked traffic\033[0m"
-echo "Testing that the tester pod CANNOT reach api or db (should fail)..."
+echo -e "\033[36m[6/8] Testing blocked and allowed traffic\033[0m"
+echo "Testing blocked and allowed policy paths..."
 echo ""
 
-echo -e "\033[36mTest 1: tester → api\033[0m"
+echo -e "\033[36mTest 1: tester → api (should be blocked)\033[0m"
 set +e  # Temporarily disable exit on error
 TEST1_OUTPUT=$(kubectl exec -n demo-groot tester -- curl -sS --connect-timeout 3 api:8080/get 2>&1)
 TEST1_EXIT=$?
@@ -126,16 +126,21 @@ else
 fi
 
 echo ""
-echo -e "\033[36mTest 2: tester → db\033[0m"
+echo -e "\033[36mTest 2: tester → db (should be blocked)\033[0m"
+# Use a short-lived postgres client pod labeled app=tester. pg_isready gives a
+# reliable TCP-level database reachability result, unlike HTTP curl to port 5432.
+echo "Probing from an ephemeral postgres pod labeled app=tester (denied by policy)..."
 set +e  # Temporarily disable exit on error
-kubectl exec -n demo-groot tester -- curl -sS --connect-timeout 3 db:5432 2>/dev/null
+TEST2_OUTPUT=$(kubectl run tester-db-probe -n demo-groot --rm -i --restart=Never \
+    --labels=app=tester --image=postgres:16-alpine --command -- \
+    pg_isready -h db -p 5432 -U postgres -t 3 2>&1)
 TEST2_EXIT=$?
 set -e  # Re-enable exit on error
 if [[ $TEST2_EXIT -eq 0 ]]; then
-    echo -e "\033[31m❌ Connection succeeded (should be blocked by network policy)\033[0m"
+    echo -e "\033[31m❌ DB probe succeeded (should be blocked by network policy)\033[0m"
     echo -e "\033[33m   Note: Network policies may not be enforced on this cluster\033[0m"
 else
-    echo -e "\033[32m✅ Connection blocked by network policy\033[0m"
+    echo -e "\033[32m✅ DB probe blocked by network policy\033[0m"
 fi
 
 echo ""
@@ -150,10 +155,29 @@ TEST3_OUTPUT=$(kubectl run frontend-probe -n demo-groot --rm -i --restart=Never 
     curl -sS --connect-timeout 3 api:8080/get 2>&1)
 set -e  # Re-enable exit on error
 if echo "$TEST3_OUTPUT" | grep -q '"url"'; then
-    echo -e "\033[32m✅ Frontend can reach API (allowed by policy)\033[0m"
+    echo -e "\033[32m✅ Frontend-labeled probe can reach API (allowed by policy)\033[0m"
 else
-    echo -e "\033[31m❌ Frontend blocked (unexpected)\033[0m"
+    echo -e "\033[31m❌ Frontend-labeled probe blocked (unexpected)\033[0m"
     echo -e "\033[33m   Output: ${TEST3_OUTPUT}\033[0m"
+fi
+
+echo ""
+echo -e "\033[36mTest 4: api → db (should work)\033[0m"
+# go-httpbin is distroless and has no shell/client tools, so we probe from a
+# short-lived postgres client pod labeled app=api. The allow-api-* policies key
+# on that label, so this traffic takes the genuine allowed path to the DB.
+echo "Probing from an ephemeral postgres pod labeled app=api (allowed by policy)..."
+set +e  # Temporarily disable exit on error
+TEST4_OUTPUT=$(kubectl run api-db-probe -n demo-groot --rm -i --restart=Never \
+    --labels=app=api --image=postgres:16-alpine --command -- \
+    pg_isready -h db -p 5432 -U postgres -t 3 2>&1)
+TEST4_EXIT=$?
+set -e  # Re-enable exit on error
+if [[ $TEST4_EXIT -eq 0 ]]; then
+    echo -e "\033[32m✅ API-labeled probe can reach DB (allowed by policy)\033[0m"
+else
+    echo -e "\033[31m❌ API-labeled probe blocked from DB (unexpected)\033[0m"
+    echo -e "\033[33m   Output: ${TEST4_OUTPUT}\033[0m"
 fi
 
 pause
@@ -167,9 +191,9 @@ echo ""
 echo -e "\033[36mTest: tester → api (should now work)\033[0m"
 set +e  # Temporarily disable exit on error
 kubectl exec -n demo-groot tester -- curl -sS --connect-timeout 3 api:8080/get 2>/dev/null
-TEST4_EXIT=$?
+TEST5_EXIT=$?
 set -e  # Re-enable exit on error
-if [[ $TEST4_EXIT -eq 0 ]]; then
+if [[ $TEST5_EXIT -eq 0 ]]; then
     echo -e "\033[32m✅ Success: Tester can now reach API (allowed by new policy)\033[0m"
 else
     echo -e "\033[31m❌ Failed: Connection still blocked\033[0m"

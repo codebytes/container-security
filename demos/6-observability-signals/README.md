@@ -1,11 +1,11 @@
 # Observability Signals Demo (Mantis)
 
 ## Purpose
-Connect application telemetry (OpenTelemetry), runtime security alerts (Falco), and network events (Kubernetes NetworkPolicy) into a single correlated view to shorten detection-to-response time.
+Connect application telemetry (OpenTelemetry) and runtime security alerts (Falco) into a single correlated view to shorten detection-to-response time.
 
 ## Outcomes
 - Deploy an instrumented demo API emitting traces/metrics/logs via OpenTelemetry.
-- Run an OpenTelemetry Collector that exports data to Prometheus and Loki-compatible outputs.
+- Run an OpenTelemetry Collector that logs traces/events and exposes Prometheus-format metrics.
 - Forward Falco alerts into the same pipeline via Falcosidekick → OTLP adapter.
 - Visualize correlated events by pod, namespace, and timestamp (app spans plus Falco log records); Falco alerts do not share application trace IDs.
 
@@ -26,7 +26,7 @@ $env:IMAGE_TAG = "ghcr.io/codebytes/guardian-telemetry:0.1.0"
 1. **Deploy Observability Stack**
    - Apply OpenTelemetry Collector deployment (`collector/otel-collector.yaml`) into namespace `demo-mantis`.
    - Collector exposes OTLP gRPC/HTTP and Prometheus scrape endpoint (port 9464).
-   - Optional: Wire collector exporters to Loki/Tempo by editing ConfigMap (defaults to logging + Prometheus only).
+   - Optional: Wire collector exporters to Loki/Tempo by editing ConfigMap (defaults to debug + Prometheus only).
 2. **Deploy Instrumented API**
    - Build/push image (`app/Dockerfile`) or set repo digest; update `manifests/instrumented-api.yaml` if needed.
    - Apply manifest so pods export OTLP spans/metrics/logs to collector.
@@ -41,13 +41,13 @@ $env:IMAGE_TAG = "ghcr.io/codebytes/guardian-telemetry:0.1.0"
    - Import Grafana dashboard JSON (`dashboards/observability.json`) and map datasources.
    - If Loki/Tempo not configured, rely on collector log output (`kubectl logs deployment/otel-collector`) and Prometheus port-forward for validation.
 6. **Cleanup**
-   - Delete namespace, collector, Grafana Agent.
+   - Delete the demo namespace and Falcosidekick; Falco itself is preserved for the runtime demo cleanup.
 
 ## File Structure
 | Path | Description |
 |------|-------------|
 | `app/` | Instrumented FastAPI service emitting OTEL data |
-| `collector/otel-collector.yaml` | OTEL Collector deployment/config (logging + Prometheus exporters) |
+| `collector/otel-collector.yaml` | OTEL Collector deployment/config (debug + Prometheus exporters) |
 | `manifests/instrumented-api.yaml` | Deployment & Service for API |
 | `manifests/falcosidekick-config.yaml` | Falcosidekick values override pointing to OTEL collector |
 | `manifests/load-generator.yaml` | Busybox or k6 job hitting API |
@@ -57,8 +57,8 @@ $env:IMAGE_TAG = "ghcr.io/codebytes/guardian-telemetry:0.1.0"
 ## Verification Checklist
 - [ ] OTEL Collector pods running and receiving spans.
 - [ ] Instrumented API generating traces for `/hello` endpoint.
-- [ ] Falco alert ingested and visible via Grafana Agent log pipeline.
-- [ ] Dashboard displays timeline with correlated trace/span + Falco alert metadata.
+- [ ] Falco alert ingested through Falcosidekick → OTLP adapter and visible in collector/log output.
+- [ ] Timeline can correlate app span/log context with Falco alert metadata by pod, namespace, and timestamp.
 
 ## Cleanup
 ```powershell

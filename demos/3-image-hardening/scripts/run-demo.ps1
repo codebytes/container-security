@@ -60,13 +60,15 @@ function Write-FallbackJson {
         [int]$Critical,
         [int]$High,
         [int]$Medium,
-        [int]$Low
+        [int]$Low,
+        [int]$Unknown
     )
     $vulns = @()
     for ($i = 0; $i -lt $Critical; $i++) { $vulns += @{ Severity = "CRITICAL" } }
     for ($i = 0; $i -lt $High; $i++)     { $vulns += @{ Severity = "HIGH" } }
     for ($i = 0; $i -lt $Medium; $i++)   { $vulns += @{ Severity = "MEDIUM" } }
     for ($i = 0; $i -lt $Low; $i++)      { $vulns += @{ Severity = "LOW" } }
+    for ($i = 0; $i -lt $Unknown; $i++)  { $vulns += @{ Severity = "UNKNOWN" } }
     $doc = @{ Results = @(@{ Target = "fallback (simulated)"; Vulnerabilities = $vulns }) }
     $doc | ConvertTo-Json -Depth 6 | Out-File -FilePath $File -Encoding UTF8
 }
@@ -126,7 +128,7 @@ try {
     Write-Host "✅ Baseline scan completed" -ForegroundColor Green
 } catch {
     Write-Host "⚠️  Trivy not available - writing simulated JSON (counts match committed reports)" -ForegroundColor Yellow
-    Write-FallbackJson -File $beforeJson -Critical 41 -High 468 -Medium 1319 -Low 1609
+    Write-FallbackJson -File $beforeJson -Critical 195 -High 1127 -Medium 3137 -Low 2016 -Unknown 26
 }
 
 Write-Host ""
@@ -146,7 +148,7 @@ try {
     Write-Host "✅ Hardened scan completed" -ForegroundColor Green
 } catch {
     Write-Host "⚠️  Trivy not available - writing simulated JSON (counts match committed reports)" -ForegroundColor Yellow
-    Write-FallbackJson -File $afterJson -Critical 2 -High 6 -Medium 11 -Low 30
+    Write-FallbackJson -File $afterJson -Critical 5 -High 21 -Medium 88 -Low 51 -Unknown 1
 }
 
 Write-Host ""

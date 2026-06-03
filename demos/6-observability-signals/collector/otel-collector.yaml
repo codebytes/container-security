@@ -80,8 +80,8 @@ data:
             value: falco
             action: insert
     exporters:
-      logging/debug:
-        loglevel: debug
+      debug:
+        verbosity: detailed
       prometheus:
         endpoint: 0.0.0.0:9464
         # Keep the metric name as http_server_duration (no _milliseconds suffix)
@@ -96,12 +96,12 @@ data:
         traces:
           receivers: [otlp]
           processors: [batch]
-          exporters: [logging/debug]
+          exporters: [debug]
         metrics:
           receivers: [otlp]
           processors: [batch]
-          exporters: [logging/debug, prometheus]
+          exporters: [debug, prometheus]
         logs:
           receivers: [otlp]
           processors: [batch, attributes/add-falco-labels]
-          exporters: [logging/debug]
+          exporters: [debug]

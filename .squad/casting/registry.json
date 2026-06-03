@@ -1,0 +1,53 @@
+{
+  "agents": {
+    "star-lord": {
+      "persistent_name": "Star-Lord",
+      "universe": "Marvel Cinematic Universe",
+      "created_at": "2026-05-30T08:49:29.828-04:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "gamora": {
+      "persistent_name": "Gamora",
+      "universe": "Marvel Cinematic Universe",
+      "created_at": "2026-05-30T08:49:29.828-04:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "rocket": {
+      "persistent_name": "Rocket",
+      "universe": "Marvel Cinematic Universe",
+      "created_at": "2026-05-30T08:49:29.828-04:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "drax": {
+      "persistent_name": "Drax",
+      "universe": "Marvel Cinematic Universe",
+      "created_at": "2026-05-30T08:49:29.828-04:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "groot": {
+      "persistent_name": "Groot",
+      "universe": "Marvel Cinematic Universe",
+      "created_at": "2026-05-30T08:49:29.828-04:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "mantis": {
+      "persistent_name": "Mantis",
+      "universe": "Marvel Cinematic Universe",
+      "created_at": "2026-05-30T08:49:29.828-04:00",
+      "legacy_named": false,
+      "status": "active"
+    },
+    "nebula": {
+      "persistent_name": "Nebula",
+      "universe": "Marvel Cinematic Universe",
+      "created_at": "2026-05-30T08:57:06.927-04:00",
+      "legacy_named": false,
+      "status": "active"
+    }
+  }
+}

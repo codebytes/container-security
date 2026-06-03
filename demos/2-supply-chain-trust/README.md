@@ -1,13 +1,13 @@
 # Supply Chain Trust Demo (Gamora)
 
 ## Purpose
-Illustrate a secure image pipeline that produces an SBOM, scans for vulnerabilities, signs the artifact, stores attestations, and enforces signature & severity thresholds before deployment.
+Illustrate a secure image pipeline that produces an SBOM, scans for vulnerabilities, signs the artifact, stores attestations, and enforces signature trust before deployment.
 
 ## Outcomes
 - Generate SBOMs as build artifacts.
-- Fail builds when severity thresholds are exceeded.
+- Scan images and review severity thresholds (informational by default; strict gate optional).
 - Sign images with Cosign and store attestations.
-- Enforce signature verification + vulnerability policy at admission.
+- Enforce signature verification at admission so signed images are admitted and unsigned images are rejected.
 
 ## Prerequisites
 - Docker / container runtime (or `nerdctl`)

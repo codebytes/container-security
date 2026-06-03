@@ -14,6 +14,8 @@ Show how Falco detects suspicious container activity (writing below `/etc`) and 
 - Helm 3.
 - Optional: Falcosidekick for forwarding alerts to Slack/Webhook (not required here).
 
+This demo uses the fully supported Falco Helm chart with the modern eBPF driver. For production environments, the Falco Operator is the recommended install path.
+
 ## Environment Preparation
 1. **Create namespaces**
 

@@ -56,9 +56,9 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ## Container Security: The Impact
 
 **The Numbers:**
-- 78% of orgs fail audits due to unresolved container CVEs
-- 63% of organizations hit by supply chain attacks (2024-2025)
-- ~10-day global median attacker dwell time (Mandiant M-Trends 2024) — still days of undetected access without runtime detection
+- 78% of surveyed orgs fail audits due to unresolved container CVEs
+- 63% of surveyed large enterprises hit by supply chain attacks (2024-2025)
+- Recent M-Trends reports show dwell time still measured in days without runtime detection
 
 ---
 
@@ -99,7 +99,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 **Shield Right** = Detect & contain what gets through (runtime)
 - Behavioral detection, network policies, observability
-- Why: even a ~10-day global median dwell time (Mandiant M-Trends 2024) means attackers operate undetected for days
+- Why: recent M-Trends reports show attackers can still operate undetected for days
 
 **Both required.** Prevention alone is not enough.
 
@@ -107,15 +107,18 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ## Principles We'll Apply Throughout
 
-**Zero Trust:** Never trust, always verify — even inside the cluster *(→ Groot)*
+**Policy as Code:** Make the gate explicit, reviewed, and auditable *(→ Star-Lord)*
 **Supply Chain Security:** You don't control your dependencies — verify them *(→ Gamora)*
+**Least Privilege:** Ship less, run smaller, expose fewer tools *(→ Rocket)*
+**Runtime Awareness:** Assume something gets through; watch behavior *(→ Drax)*
+**Zero Trust:** Never trust, always verify — even inside the cluster *(→ Groot)*
 **Security Observability:** Siloed tools miss correlated attacks *(→ Mantis)*
 
-**Standard:** NIST SP 800-207 &nbsp;|&nbsp; **Framework:** SLSA (OpenSSF)
+**Standards:** NIST SP 800-207 &nbsp;|&nbsp; SLSA (OpenSSF)
 
 **Our tools:** CNCF-first — portable, community-driven, production-proven
-- **Graduated:** Falco, OPA, Cilium, Prometheus, Kyverno
-- **Incubating:** Trivy, Sigstore, OpenTelemetry
+- **Graduated:** Falco, OPA, Cilium, Prometheus, Kyverno, OpenTelemetry
+- **Incubating:** Trivy, Sigstore
 
 ---
 
@@ -184,8 +187,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 **What We'll Show:**
 
 1. Deploy Kyverno admission controller
-2. Apply policy: Require signed images + non-root
-3. Try unsigned image → ❌ **Blocked**
+2. Apply policy: non-root + simulated signed-image gate
+3. Try insecure image tag → ❌ **Blocked**
 4. Try root container → ❌ **Denied**
 5. Deploy compliant workload → ✅ **Success**
 
@@ -212,7 +215,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 **Real-World Proof:**
 - **xz-utils (2024):** Trusted maintainer planted SSH backdoor after 2 years
 - **LiteLLM (2026):** Compromised security scanner → AI gateway backdoored on PyPI
-- **Axios NPM (2026):** Hijacked account → RAT delivered to 100M+ weekly downloaders
+- **Axios NPM (2026):** Hijacked account → RAT delivered to 70M+ weekly downloaders
 
 ---
 
@@ -239,7 +242,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ## Gamora: SLSA Framework
 
-**Supply chain Levels for Software Artifacts (v1.0)**
+**Supply chain Levels for Software Artifacts (v1.1)**
 
 - **Build L0:** No guarantees (status quo)
 - **Build L1:** Build provenance exists
@@ -259,7 +262,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 1. Generate SBOM with Syft → See all packages
 2. Scan image with Trivy → Find CVEs
-3. Sign with Cosign → Keyless OIDC signature
+3. Sign with Cosign → Reproducible keyed demo signature
 4. Verify signature → Cryptographic proof
 5. Deploy with policy → Only signed allowed
 
@@ -297,10 +300,11 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ## Rocket: Distroless by the Numbers
 
-**Numbers:**
+**Illustrative static-base examples:**
 - Ubuntu base: ~80MB, 100+ packages
 - Distroless: ~2-20MB, <10 packages
-- **Result (this demo):** ~99% fewer CVEs (Debian 11 `bullseye` → Debian 12 distroless — note the base-image bump)
+
+**Result (this demo):** 1322→26 HIGH/CRITICAL findings (~98% fewer); 430→34 OS packages
 
 **Modern Options:**
 - **Google Distroless** (Debian-based, Bazel builds)
@@ -339,8 +343,8 @@ ENTRYPOINT ["python", "/app/main.py"]
 
 1. Scan "before" (python:3.11-bullseye) → Count CVEs
 2. Scan "after" (distroless python3-debian12) → Count CVEs
-3. Compare: **~99% CVE reduction** (base image bumped Debian 11 → 12)
-4. Compare sizes: **50%+ smaller**
+3. Compare: **1322→26 HIGH/CRITICAL findings** (~98% fewer)
+4. Compare sizes: **1.42 GB → 125 MB** (~91% smaller)
 5. Show: No shell in distroless container
 
 **Key Takeaway:** Minimal base = minimal risk
@@ -368,7 +372,7 @@ ENTRYPOINT ["python", "/app/main.py"]
 - **Insider threats** → Authorized malicious actions
 - **Configuration drift** → Runtime container changes
 
-**Remember that ~10-day median dwell time?** Runtime detection is how you shrink it further.
+**Remember dwell time is still measured in days?** Runtime detection is how you shrink it further.
 
 **You need eyes on running containers**
 
@@ -381,9 +385,9 @@ ENTRYPOINT ["python", "/app/main.py"]
 **What is eBPF?**
 - Kernel-level syscall monitoring
 - Verified safe by kernel (can't crash system)
-- JIT compiled (near-native performance <1% overhead)
-- Event-driven (zero cost when idle)
-- **Can't be bypassed** by userspace malware
+- Low-overhead, event-driven, JIT-compiled
+- Kernel-level visibility without polling every process
+- Harder for userspace malware to tamper with than app logs
 
 **Used by:** Cilium, Falco, Tetragon, Pixie, Hubble
 
@@ -441,12 +445,12 @@ Use Tetragon when you need real-time kernel-level blocking
 - Any pod can reach any other pod
 - No network boundaries between namespaces
 - Attacker compromises frontend → pivots to database
-- Single vulnerability = full cluster access
+- A single vulnerability can expand blast radius without segmentation
 
-**Real Attack:** Capital One breach (2019)
+**Cloud lateral-movement lesson:** Capital One breach (2019)
 - SSRF in web app → AWS metadata service
-- Stolen credentials → S3 bucket access
-- **Lesson:** Flat networks enable easy lateral movement
+- Over-permissioned credentials → S3 bucket access
+- **Lesson:** segmentation and least privilege limit pivots
 
 ---
 
@@ -465,7 +469,7 @@ Use Tetragon when you need real-time kernel-level blocking
 - **Egress:** "API can only connect to `app=database`"
 - **Namespace:** "Nothing in `dev` can reach `prod`"
 
-**CNI Plugin Required:** Calico, Cilium (Docker Desktop doesn't support!)
+**CNI Plugin Required:** Calico or Cilium; Docker Desktop's default cluster accepts NetworkPolicy objects but does not enforce them without an enforcing CNI
 
 **Beyond L3/L4:** Service mesh (Istio, Linkerd) adds mTLS + L7 identity
 
@@ -476,11 +480,11 @@ Use Tetragon when you need real-time kernel-level blocking
 
 **What We'll Show:**
 
-1. Deploy 3-tier app (flat network)
-2. Test: All pods can reach each other
+1. Deploy 3-tier app (default flat network)
+2. Show baseline risk: no policy boundary yet
 3. Apply default-deny → All blocked
-4. Test: Tester can't reach API/DB ✅
-5. Apply allow rules → Only approved paths
+4. Apply allow rules → Only approved paths
+5. Test: Tester can't reach API/DB ✅
 6. Test: Frontend→API→DB works, rest blocked ✅
 
 **Key Takeaway:** Contain breaches, prevent lateral movement
@@ -534,7 +538,7 @@ Use Tetragon when you need real-time kernel-level blocking
 - Trace ID (links requests across services)
 - Timestamp (timeline reconstruction)
 
-**Goal:** Mean Time To Respond (MTTR) < 1 hour
+**Internal goal:** Drive Mean Time To Respond (MTTR) toward < 1 hour
 
 ---
 
@@ -561,10 +565,10 @@ Use Tetragon when you need real-time kernel-level blocking
 **What We'll Show:**
 
 1. Deploy OTEL collector + instrumented app
-2. Deploy Falcosidekick → Route alerts to OTEL
+2. Wire Falcosidekick/adapter for Demo #4 alerts
 3. Generate traffic → See traces in logs
 4. (Optional) Trigger Falco → See security events alongside app traces
-5. View timeline → App + security events
+5. Correlate by pod, namespace, and timestamp
 
 **Key Takeaway:** Link security to business impact
 
@@ -590,9 +594,9 @@ Use Tetragon when you need real-time kernel-level blocking
 
 | Attack Step | Guardian | Action | Result |
 |-------------|----------|--------|--------|
-| Mining process spawns | 💪 Drax | Falco detects anomaly | ✅ Alert in seconds |
+| Mining process spawns | 💪 Drax | Falco detects anomaly with tuned rules | ✅ Near-real-time alert |
 | C2 network beacon | 🌳 Groot | Egress policy blocks it | ✅ Contained |
-| Full timeline needed | 🔮 Mantis | Correlates all signals | ✅ MTTR < 1 hour |
+| Full timeline needed | 🔮 Mantis | Correlates all signals | ✅ MTTR trending toward target |
 
 **Not every layer prevents — some reduce, some detect, some contain.**
 
