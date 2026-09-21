@@ -1,6 +1,8 @@
 ---
 marp: true
 theme: custom-default
+title: 'Guardians of the Container Galaxy: Defending the Cosmic Cluster'
+author: 'Chris Ayers - Principal Software Engineer, Azure EngOps AzRel, Microsoft'
 paginate: true
 footer: '[chris-ayers.com](https://chris-ayers.com/) | [Bluesky](https://bsky.app/profile/chris-ayers.com)'
 description: 'A layered, CNCF-based walkthrough of pragmatic container security.'
@@ -20,8 +22,10 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ### Chris Ayers
 #### Principal Software Engineer
+#### Azure EngOps AzRel
 #### Microsoft
 
+</div>
 </div>
 
 ![bg ](./img/team.png)
@@ -66,7 +70,7 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ## The Container Attack Kill Chain
 
-![center w:650](./img/attack-kill-chain.drawio.png)
+![center h:480](./img/attack-kill-chain.drawio.png)
 
 ---
 
@@ -92,6 +96,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 | **Observability** | Reconstructed timeline across signals |
 
 ---
+
+<!-- _class: compact -->
 
 ## Shift Left + Shield Right
 
@@ -212,6 +218,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 
 ---
 
+<!-- _class: compact -->
+
 ## Gamora: The Supply Chain Problem
 
 ![bg right:24%](https://plus.unsplash.com/premium_photo-1661879449050-069f67e200bd?q=80&w=822&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
@@ -233,6 +241,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 ![center w:900](./img/supply-chain-pipeline.drawio.png)
 
 ---
+
+<!-- _class: compact -->
 
 ## Gamora: Vulnerability Scanning & Signing
 
@@ -320,6 +330,8 @@ description: 'A layered, CNCF-based walkthrough of pragmatic container security.
 - **Chainguard Images / Wolfi** (2,000+ images, nightly rebuilds, built-in SBOMs, near-zero CVEs)
 
 ---
+
+<!-- _class: compact -->
 
 ## Rocket: Multi-Stage Builds
 
@@ -449,6 +461,8 @@ Use Tetragon when you need real-time kernel-level blocking
 
 ---
 
+<!-- _class: compact -->
+
 ## Groot: The Lateral Movement Problem
 
 ![bg right:24%](https://plus.unsplash.com/premium_photo-1674669009418-2643aa58b11b?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)
@@ -469,7 +483,7 @@ Use Tetragon when you need real-time kernel-level blocking
 
 ## Groot: Zero Trust in Kubernetes
 
-![center w:900](./img/zero-trust-network.drawio.png)
+![center h:480](./img/zero-trust-network.drawio.png)
 
 ---
 
@@ -511,7 +525,7 @@ Use Tetragon when you need real-time kernel-level blocking
 ## 🔮 Mantis
 ### Security Observability
 
-![bg right](./img/observability.png)
+![bg right:37.5%](./img/observability.png)
 
 ---
 
@@ -672,6 +686,8 @@ Use Tetragon when you need real-time kernel-level blocking
 
 </div>
 <div>
+
+**Chris Ayers**<br>Principal Software Engineer<br>Azure EngOps AzRel<br>Microsoft
 
 <i class="fa-brands fa-bluesky"></i> BlueSky: [@chris-ayers.com](https://bsky.app/profile/chris-ayers.com)
 <i class="fa-brands fa-linkedin"></i> LinkedIn: - [chris\-l\-ayers](https://linkedin.com/in/chris-l-ayers/)
