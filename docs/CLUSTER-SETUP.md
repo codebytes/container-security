@@ -6,6 +6,27 @@ container-security demos — including demo 5 (zero-trust networking), which onl
 
 ---
 
+## Demos
+
+Hands-on walkthroughs live under `demos/` for each Guardian archetype:
+
+1. [demos/1-policy-guardrails/](../demos/1-policy-guardrails/) – **Star-Lord**: Kyverno admission policy guardrails (non-root + simulated signed-image validation)
+2. [demos/2-supply-chain-trust/](../demos/2-supply-chain-trust/) – **Gamora**: SBOM, scanning, signing pipeline
+3. [demos/3-image-hardening/](../demos/3-image-hardening/) – **Rocket**: Dockerfile before/after with Trivy diff
+4. [demos/4-runtime-detection/](../demos/4-runtime-detection/) – **Drax**: Falco custom rule + controlled trigger
+5. [demos/5-zero-trust-networking/](../demos/5-zero-trust-networking/) – **Groot**: Deny-by-default NetworkPolicies
+6. [demos/6-observability-signals/](../demos/6-observability-signals/) – **Mantis**: OTEL telemetry + Falco alert correlation
+
+For NetworkPolicy enforcement (demo 5), use **kind + Calico** via
+[`scripts/setup-kind-cluster.sh`](../scripts/setup-kind-cluster.sh) (or
+[`scripts/setup-kind-cluster.ps1`](../scripts/setup-kind-cluster.ps1) on Windows).
+When finished, tear down with
+[`scripts/teardown-kind-cluster.sh`](../scripts/teardown-kind-cluster.sh) (or
+[`scripts/teardown-kind-cluster.ps1`](../scripts/teardown-kind-cluster.ps1)).
+The sections below cover the lifecycle, prerequisites, cluster choice, and quickstart.
+
+---
+
 ## Lifecycle: set up once, tear down when finished
 
 The whole talk uses **one shared cluster** as the single source of truth.
