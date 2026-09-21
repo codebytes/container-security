@@ -2,7 +2,7 @@
 marp: true
 theme: custom-default
 paginate: true
-footer: 'chris-ayers.com | @Chris_L_Ayers'
+footer: '[chris-ayers.com](https://chris-ayers.com/) | [Bluesky](https://bsky.app/profile/chris-ayers.com)'
 description: 'A layered, CNCF-based walkthrough of pragmatic container security.'
 ---
 
