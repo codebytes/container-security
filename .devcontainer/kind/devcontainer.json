@@ -3,11 +3,11 @@
 {
 	"name": "Kubernetes - Minikube-in-Docker",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/base:bullseye",
+	"image": "mcr.microsoft.com/devcontainers/base:bookworm",
 
+	"remoteUser": "vscode",
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:4": {
-			"enableNonRootDocker": "true",
 			"moby": "true"
 		},
 		"ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
